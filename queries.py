@@ -285,9 +285,394 @@ def create_tables(conn:sqlite3.Connection):
         FOREIGN KEY (ResultID) REFERENCES Result(ResultID)
     );
     """)
+    cursor.execute("PRAGMA foreign_keys = ON")
+    conn.commit()
 
 
+
+GENDERS = [
+    "Male",
+    "Female",
+    "Mixed",
+    "Not Specified"
+]
+DISCIPLINES = [
+    "Surf",
+    "Beach",
+    "Boats",
+    "Lifesaving"
+]
+SESSIONS = [
+    "Morning",
+    "Afternoon",
+    "All Day"
+]
+VOLUNTEER_TYPES = [
+    "Course Trainer",
+    "Water Safety",
+    "Sunday Program Help",
+    "Fundraiser",
+    "Club Chore"
+]
+AGE_GROUPS = [
+    "Open",
+    "Masters",
+    "U13",
+    "U14",
+    "U15",
+    "U17",
+    "U19",
+    "U23"
+]
+
+def add_athlete(conn:sqlite3.Connection,
+                firstname:str,
+                lastname:str,
+                gender:int|str,
+                dob:str,
+                maindiscipline:int|str,
+                patrolgroupid:int|None,
+                phone:str,
+                email:str,
+                active:bool):
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO Athlete (
+        FirstName,
+        LastName,
+        Gender,
+        DOB,
+        MainDiscipline,
+        PatrolGroupID,
+        Phone,
+        Email,
+        Active
+    )
+    VALUES (
+        ?,?,?,?,?,?,?,?,?
+    )
+    """,
+    (
+        firstname,
+        lastname,
+        GENDERS[gender] if isinstance(gender,int) else gender,
+        dob,
+        DISCIPLINES[maindiscipline] if isinstance(maindiscipline,int) else maindiscipline,
+        patrolgroupid,
+        phone,
+        email,
+        active
+    ))
+    conn.commit()
+
+def add_supervisor(conn:sqlite3.Connection,
+                   firstname:str,
+                   lastname:str,
+                   phone:str,
+                   email:str):
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO Supervisor (
+        FirstName,
+        LastName,
+        Phone,
+        Email
+    )
+    VALUES (
+        ?,?,?,?
+    )
+    """,
+    (
+        firstname,
+        lastname,
+        phone,
+        email,
+    ))
+    conn.commit()
+
+def add_patrolgroup(conn:sqlite3.Connection,
+                   name:str,
+                   supervisorid:int):
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO PatrolGroup (
+        Name,
+        SupervisorID
+    )
+    VALUES (
+        ?,?
+    )
+    """,
+    (
+        name,
+        supervisorid,
+    ))
+    conn.commit()
+
+def add_patrol(conn:sqlite3.Connection,
+               patrolgroupid:int,
+               date:str,
+               session:int|str,
+               holiday:bool):
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO Patrol (
+        PatrolGroupID,
+        Date,
+        Session,
+        Holiday
+    )
+    VALUES (
+        ?,?,?,?
+    )
+    """,
+    (
+        patrolgroupid,
+        date,
+        SESSIONS[session] if isinstance(session,int) else session,
+        holiday
+    ))
+    conn.commit()
+
+def add_athlete_patrol(conn:sqlite3.Connection,
+                       athleteid:int,
+                       patrolid:int,
+                       hours:float):
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO Athlete_Patrol (
+        AthleteID,
+        PatrolID,
+        Hours
+    )
+    VALUES (
+        ?,?,?
+    )
+    """,
+    (
+        athleteid,
+        patrolid,
+        hours
+    ))
+    conn.commit()
+
+def add_volunteeractivity(conn:sqlite3.Connection,
+                          supervisorid:int,
+                          name:str,
+                          type:int|str,
+                          date:str,
+                          fundsraised:float,
+                          percfundsreceived:float):
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO VolunteerActivity (
+        SupervisorID,
+        Name,
+        Type,
+        Date,
+        FundsRaised,
+        PercFundsReceived
+    )
+    VALUES (
+        ?,?,?,?,?,?
+    )
+    """,
+    (
+        supervisorid,
+        name,
+        VOLUNTEER_TYPES[type] if isinstance(type,int) else type,
+        date,
+        fundsraised,
+        percfundsreceived
+    ))
+    conn.commit()
+
+def add_athlete_volunteer(conn:sqlite3.Connection,
+                          athleteid:int,
+                          activityid:int,
+                          hours:float):
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO Athlete_Volunteer (
+        AthleteID,
+        ActivityID,
+        Hours
+    )
+    VALUES (
+        ?,?,?
+    )
+    """,
+    (
+        athleteid,
+        activityid,
+        hours
+    ))
+    conn.commit()
+
+def add_qualificationaward(conn:sqlite3.Connection,
+                           name:str):
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO QualificationAward (
+        Name
+    )
+    VALUES (
+        ?
+    )
+    """,
+    (
+        name
+    ))
+    conn.commit()
+
+def add_requalification(conn:sqlite3.Connection,
+                        athleteid:int,
+                        awardid:int,
+                        supervisorid:int,
+                        date:str):
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO Requalification (
+        AthleteID,
+        AwardID,
+        SupervisorID,
+        Date
+    )
+    VALUES (
+        ?,?,?,?
+    )
+    """,
+    (
+        athleteid,
+        awardid,
+        supervisorid,
+        date
+    ))
+    conn.commit()
+
+def add_competition(conn:sqlite3.Connection,
+                    name:str,
+                    season:int,
+                    discipline:int|str,
+                    location:str|None,
+                    startdate:str,
+                    enddate:str|None,
+                    importance:int):
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO Competition (
+        Name,
+        Season,
+        Discipline,
+        Location,
+        StartDate,
+        EndDate,
+        Importance
+    )
+    VALUES (
+        ?,?,?,?,?,?,?
+    )
+    """,
+    (
+        name,
+        season,
+        DISCIPLINES[discipline] if isinstance(discipline,int) else discipline,
+        location,
+        startdate,
+        enddate,
+        importance
+    ))
+    conn.commit()
+
+def add_event(conn:sqlite3.Connection,
+              name:str,
+              discipline:int|str,
+              teamevent:bool,
+              importance:int):
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO Event (
+        Name,
+        Discipline,
+        TeamEvent,
+        Importance
+    )
+    VALUES (
+        ?,?,?,?
+    )
+    """,
+    (
+        name,
+        DISCIPLINES[discipline] if isinstance(discipline,int) else discipline,
+        teamevent,
+        importance
+    ))
+    conn.commit()
+
+def add_race(conn:sqlite3.Connection,
+             competitionid:int,
+             eventid:int,
+             agegroup:int|str,
+             gender:int|str):
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO Race (
+        CompetitionID,
+        EventID,
+        AgeGroup,
+        Gender
+    )
+    VALUES (
+        ?,?,?,?
+    )
+    """,
+    (
+        competitionid,
+        eventid,
+        AGE_GROUPS[agegroup] if isinstance(agegroup,int) else agegroup,
+        GENDERS[gender] if isinstance(gender,int) else gender
+    ))
+    conn.commit()
+
+def add_result(conn:sqlite3.Connection,
+               raceid:int,
+               ranking:int):
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO Result (
+        RaceID,
+        Ranking
+    )
+    VALUES (
+        ?,?
+    )
+    """,
+    (
+        raceid,
+        ranking
+    ))
+    conn.commit()
+
+def add_athlete_result(conn:sqlite3.Connection,
+                       athleteid:int,
+                       resultid:int):
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO Athlete_Result (
+        AthleteID,
+        ResultID
+    )
+    VALUES (
+        ?,?
+    )
+    """,
+    (
+        athleteid,
+        resultid
+    ))
+    conn.commit()
 
 if __name__=="__main__":
     conn = sqlite3.connect("database.db")
-    create_tables(conn)
+    conn.commit()
+    conn.close()
