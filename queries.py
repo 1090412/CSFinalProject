@@ -1,4 +1,5 @@
 import sqlite3
+import enums
 
 def create_tables(conn:sqlite3.Connection):
     cursor = conn.cursor()
@@ -290,41 +291,6 @@ def create_tables(conn:sqlite3.Connection):
 
 
 
-GENDERS = [
-    "Male",
-    "Female",
-    "Mixed",
-    "Not Specified"
-]
-DISCIPLINES = [
-    "Surf",
-    "Beach",
-    "Boats",
-    "Lifesaving"
-]
-SESSIONS = [
-    "Morning",
-    "Afternoon",
-    "All Day"
-]
-VOLUNTEER_TYPES = [
-    "Course Trainer",
-    "Water Safety",
-    "Sunday Program Help",
-    "Fundraiser",
-    "Club Chore"
-]
-AGE_GROUPS = [
-    "Open",
-    "Masters",
-    "U13",
-    "U14",
-    "U15",
-    "U17",
-    "U19",
-    "U23"
-]
-
 def add_athlete(conn:sqlite3.Connection,
                 firstname:str,
                 lastname:str,
@@ -355,9 +321,9 @@ def add_athlete(conn:sqlite3.Connection,
     (
         firstname,
         lastname,
-        GENDERS[gender] if isinstance(gender,int) else gender,
+        enums.GENDERS[gender] if isinstance(gender,int) else gender,
         dob,
-        DISCIPLINES[maindiscipline] if isinstance(maindiscipline,int) else maindiscipline,
+        enums.DISCIPLINES[maindiscipline] if isinstance(maindiscipline,int) else maindiscipline,
         patrolgroupid,
         phone,
         email,
@@ -429,7 +395,7 @@ def add_patrol(conn:sqlite3.Connection,
     (
         patrolgroupid,
         date,
-        SESSIONS[session] if isinstance(session,int) else session,
+        enums.SESSIONS[session] if isinstance(session,int) else session,
         holiday
     ))
     conn.commit()
@@ -480,7 +446,7 @@ def add_volunteeractivity(conn:sqlite3.Connection,
     (
         supervisorid,
         name,
-        VOLUNTEER_TYPES[type] if isinstance(type,int) else type,
+        enums.VOLUNTEER_TYPES[type] if isinstance(type,int) else type,
         date,
         fundsraised,
         percfundsreceived
@@ -576,7 +542,7 @@ def add_competition(conn:sqlite3.Connection,
     (
         name,
         season,
-        DISCIPLINES[discipline] if isinstance(discipline,int) else discipline,
+        enums.DISCIPLINES[discipline] if isinstance(discipline,int) else discipline,
         location,
         startdate,
         enddate,
@@ -603,7 +569,7 @@ def add_event(conn:sqlite3.Connection,
     """,
     (
         name,
-        DISCIPLINES[discipline] if isinstance(discipline,int) else discipline,
+        enums.DISCIPLINES[discipline] if isinstance(discipline,int) else discipline,
         teamevent,
         importance
     ))
@@ -629,8 +595,8 @@ def add_race(conn:sqlite3.Connection,
     (
         competitionid,
         eventid,
-        AGE_GROUPS[agegroup] if isinstance(agegroup,int) else agegroup,
-        GENDERS[gender] if isinstance(gender,int) else gender
+        enums.AGE_GROUPS[agegroup] if isinstance(agegroup,int) else agegroup,
+        enums.GENDERS[gender] if isinstance(gender,int) else gender
     ))
     conn.commit()
 
@@ -671,6 +637,103 @@ def add_athlete_result(conn:sqlite3.Connection,
         resultid
     ))
     conn.commit()
+
+
+
+def view_athletes(conn:sqlite3.Connection,
+                  sort_attr:str,
+                  sort_dir:bool,
+                  filters:dict,
+                  columns:list[int],
+                  limit:int|None=None):
+    cursor = conn.cursor()
+    values = []
+    sort_query = f"ORDER BY {sort_attr} {'ASC' if sort_dir else 'DESC'}"
+    filter_queries = []
+    for attribute,restirction in filters.items():
+        query = None
+        if isinstance(restirction,str):
+            query = f"{attribute} LIKE '%{restirction}%'"
+        if isinstance(restirction,tuple) and len(restirction)==2:
+            query = f"{attribute} BETWEEN ? AND ?"
+            values.extend(restirction)
+        if isinstance(restirction,list):
+            query = f"{attribute} IN ({",".join("?" for _ in restirction)})"
+            values.extend(restirction)
+        if query:
+            filter_queries.append(query)
+    if len(filter_queries)>0:
+        filter_query = "WHERE " + "AND".join(filter_queries)
+    else:
+        filter_query = ""
+    if limit:
+        limit_query = f"LIMIT {limit}"
+    else:
+        limit_query = ""
+    cursor.execute(f"""
+    SELECT
+        FirstName||" "||LastName AS Name,
+        FirstName,
+        LastName,
+        Gender,
+        DOB,
+        MainDiscipline,
+        PatrolGroupID,
+        Phone,
+        Email,
+        Active,
+        COALESCE(p.Number,0) AS Patrols,
+        COALESCE(p.Total,0) AS PatrolHours,
+        COALESCE(v.Number,0) AS VolunteerSessions,
+        COALESCE(v.Total,0) AS VolunteerHours,
+        COALESCE(p.Total,0) + COALESCE(v.Total,0) AS TotalHours,
+        COALESCE(c.NumCompetitions,0) AS Competitions,
+        COALESCE(c.NumRaces,0) AS Races,
+        COALESCE(q.Number,0) AS Qualifications,
+        0 AS PatrolPoints,
+        0 AS VolunteerPoints,
+        0 AS CompetitionPoints,
+        0 AS TotalPoints
+    FROM Athlete
+    LEFT JOIN (
+        SELECT
+            AthleteID,
+            COUNT(PatrolID) AS Number,
+            SUM(Hours) AS Total
+        FROM Athlete_Patrol
+        GROUP BY AthleteID
+    ) AS p ON Athlete.AthleteID = p.AthleteID
+    LEFT JOIN (
+        SELECT
+            AthleteID,
+            COUNT(ActivityID) AS Number,
+            SUM(Hours) AS Total
+        FROM Athlete_Volunteer
+        GROUP BY AthleteID
+    ) AS v ON Athlete.AthleteID = v.AthleteID
+    LEFT JOIN (
+        SELECT
+            AthleteID,
+            COUNT(DISTINCT Race.CompetitionID) AS NumCompetitions,
+            COUNT(DISTINCT Race.RaceID) AS NumRaces
+        FROM Athlete_Result
+        LEFT JOIN Result ON Athlete_Result.ResultID = Result.ResultID
+        LEFT JOIN Race ON Result.RaceID = Race.RaceID
+        GROUP BY AthleteID
+    ) AS c ON Athlete.AthleteID = c.AthleteID
+    LEFT JOIN (
+        SELECT
+            AthleteID,
+            COUNT(DISTINCT AwardID) AS Number
+        FROM Requalification
+        GROUP BY AthleteID
+    ) AS q ON Athlete.AthleteID = q.AthleteID
+    {filter_query}
+    {sort_query}
+    {limit_query}
+    """, values)
+    records = [[attr for i,attr in enumerate(row) if i in columns] for row in cursor.fetchall()]
+    return records
 
 if __name__=="__main__":
     conn = sqlite3.connect("database.db")
