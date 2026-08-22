@@ -650,28 +650,31 @@ def view_athletes(conn:sqlite3.Connection,
     values = []
     sort_query = f"ORDER BY {sort_attr} {'ASC' if sort_dir else 'DESC'}"
     filter_queries = []
-    for attribute,restirction in filters.items():
+    for attribute,restriction in filters.items():
         query = None
-        if isinstance(restirction,str):
-            query = f"{attribute} LIKE '%{restirction}%'"
-        if isinstance(restirction,tuple) and len(restirction)==2:
+        if isinstance(restriction,str):
+            query = f"{attribute} LIKE ?"
+            values.append(f"%{restriction}%")
+        if isinstance(restriction,tuple) and len(restriction)==2:
             query = f"{attribute} BETWEEN ? AND ?"
-            values.extend(restirction)
-        if isinstance(restirction,list):
-            query = f"{attribute} IN ({",".join("?" for _ in restirction)})"
-            values.extend(restirction)
+            values.extend(restriction)
+        if isinstance(restriction,list):
+            query = f"{attribute} IN ({",".join("?" for _ in restriction)})"
+            values.extend(restriction)
         if query:
             filter_queries.append(query)
     if len(filter_queries)>0:
-        filter_query = "WHERE " + "AND".join(filter_queries)
+        filter_query = "WHERE " + " AND ".join(filter_queries)
     else:
         filter_query = ""
     if limit:
-        limit_query = f"LIMIT {limit}"
+        limit_query = f"LIMIT ?"
+        values.append(limit)
     else:
         limit_query = ""
     cursor.execute(f"""
     SELECT
+        AthleteID,
         FirstName||" "||LastName AS Name,
         FirstName,
         LastName,
@@ -728,6 +731,383 @@ def view_athletes(conn:sqlite3.Connection,
         FROM Requalification
         GROUP BY AthleteID
     ) AS q ON Athlete.AthleteID = q.AthleteID
+    {filter_query}
+    {sort_query}
+    {limit_query}
+    """, values)
+    records = [[attr for i,attr in enumerate(row) if i in columns] for row in cursor.fetchall()]
+    return records
+
+def view_supervisors(conn:sqlite3.Connection,
+                     sort_attr:str,
+                     sort_dir:bool,
+                     filters:dict,
+                     columns:list[int],
+                     limit:int|None=None):
+    cursor = conn.cursor()
+    values = []
+    sort_query = f"ORDER BY {sort_attr} {'ASC' if sort_dir else 'DESC'}"
+    filter_queries = []
+    for attribute,restriction in filters.items():
+        query = None
+        if isinstance(restriction,str):
+            query = f"{attribute} LIKE ?"
+            values.append(f"%{restriction}%")
+        if isinstance(restriction,tuple) and len(restriction)==2:
+            query = f"{attribute} BETWEEN ? AND ?"
+            values.extend(restriction)
+        if isinstance(restriction,list):
+            query = f"{attribute} IN ({",".join("?" for _ in restriction)})"
+            values.extend(restriction)
+        if query:
+            filter_queries.append(query)
+    if len(filter_queries)>0:
+        filter_query = "WHERE " + " AND ".join(filter_queries)
+    else:
+        filter_query = ""
+    if limit:
+        limit_query = f"LIMIT ?"
+        values.append(limit)
+    else:
+        limit_query = ""
+    cursor.execute(f"""
+    SELECT
+        SupervisorID,
+        FirstName||" "||LastName AS Name,
+        FirstName,
+        LastName,
+        Phone,
+        Email,
+        COALESCE(p.NumGroups,0) AS PatrolGroups,
+        COALESCE(p.NumPatrols,0) AS PatrolsSupervised,
+        COALESCE(v.Number,0) AS VolunteersSupervised,
+        COALESCE(q.Number,0) AS Requalifications
+    FROM Supervisor
+    LEFT JOIN (
+        SELECT
+            SupervisorID,
+            COUNT(PatrolGroupID) AS NumGroups,
+            COUNT(Patrol.PatrolID) AS NumPatrols
+        FROM PatrolGroup
+        LEFT JOIN Patrol ON PatrolGroup.PatrolGroupID = Patrol.PatrolGroupID
+        GROUP BY SupervisorID
+    ) AS p ON Supervisor.SupervisorID = p.SupervisorID
+    LEFT JOIN (
+        SELECT
+            SupervisorID,
+            COUNT(ActivityID) AS Number
+        FROM VolunteerActivity
+        GROUP BY SupervisorID
+    ) AS v ON Supervisor.SupervisorID = v.SupervisorID
+    LEFT JOIN (
+        SELECT
+            SupervisorID,
+            COUNT(AthleteID) AS Number
+        FROM Requalification
+        GROUP BY SupervisorID
+    ) AS q ON Supervisor.SupervisorID = q.SupervisorID
+    {filter_query}
+    {sort_query}
+    {limit_query}
+    """, values)
+    records = [[attr for i,attr in enumerate(row) if i in columns] for row in cursor.fetchall()]
+    return records
+
+def view_patrolgroups(conn:sqlite3.Connection,
+                      sort_attr:str,
+                      sort_dir:bool,
+                      filters:dict,
+                      columns:list[int],
+                      limit:int|None=None):
+    cursor = conn.cursor()
+    values = []
+    sort_query = f"ORDER BY {sort_attr} {'ASC' if sort_dir else 'DESC'}"
+    filter_queries = []
+    for attribute,restriction in filters.items():
+        query = None
+        if isinstance(restriction,str):
+            query = f"{attribute} LIKE ?"
+            values.append(f"%{restriction}%")
+        if isinstance(restriction,tuple) and len(restriction)==2:
+            query = f"{attribute} BETWEEN ? AND ?"
+            values.extend(restriction)
+        if isinstance(restriction,list):
+            query = f"{attribute} IN ({",".join("?" for _ in restriction)})"
+            values.extend(restriction)
+        if query:
+            filter_queries.append(query)
+    if len(filter_queries)>0:
+        filter_query = "WHERE " + " AND ".join(filter_queries)
+    else:
+        filter_query = ""
+    if limit:
+        limit_query = f"LIMIT ?"
+        values.append(limit)
+    else:
+        limit_query = ""
+    cursor.execute(f"""
+    SELECT
+        PatrolGroupID,
+        Name,
+        SupervisorID,
+        s.FirstName||" "||s.LastName AS SupervisorName,
+        COALESCE(p.NumPatrols,0) AS Patrols,
+        COALESCE(p.AvgAthletes,0) AS AverageAttendance,
+        COALESCE(p.NumAthletes,0) AS UniqueAttendees
+    FROM PatrolGroup
+    LEFT JOIN Supervisor AS s ON PatrolGroup.SupervisorID = s.SupervisorID
+    LEFT JOIN (
+        SELECT
+            PatrolGroupID,
+            COUNT(PatrolID) AS NumPatrols,
+            AVG(a.Attendance) AS AvgAthletes,
+            COUNT(DISTINCT Athlete_Patrol.AthleteID) AS NumAthletes
+        FROM Patrol
+        LEFT JOIN (
+            SELECT COUNT(AthleteID) AS Attendance FROM Athlete_Patrol GROUP BY PatrolID
+        ) AS a ON Patrol.PatrolID = a.PatrolID
+        LEFT JOIN Athlete_Patrol ON Patrol.PatrolID = Athlete_Patrol.PatrolID
+        GROUP BY PatrolGroupID
+    ) AS p ON PatrolGroup.PatrolGroupID = p.PatrolGroupID
+    {filter_query}
+    {sort_query}
+    {limit_query}
+    """, values)
+    records = [[attr for i,attr in enumerate(row) if i in columns] for row in cursor.fetchall()]
+    return records
+
+def view_patrols(conn:sqlite3.Connection,
+                 sort_attr:str,
+                 sort_dir:bool,
+                 filters:dict,
+                 columns:list[int],
+                 limit:int|None=None):
+    cursor = conn.cursor()
+    values = []
+    sort_query = f"ORDER BY {sort_attr} {'ASC' if sort_dir else 'DESC'}"
+    filter_queries = []
+    for attribute,restriction in filters.items():
+        query = None
+        if isinstance(restriction,str):
+            query = f"{attribute} LIKE ?"
+            values.append(f"%{restriction}%")
+        if isinstance(restriction,tuple) and len(restriction)==2:
+            query = f"{attribute} BETWEEN ? AND ?"
+            values.extend(restriction)
+        if isinstance(restriction,list):
+            query = f"{attribute} IN ({",".join("?" for _ in restriction)})"
+            values.extend(restriction)
+        if query:
+            filter_queries.append(query)
+    if len(filter_queries)>0:
+        filter_query = "WHERE " + " AND ".join(filter_queries)
+    else:
+        filter_query = ""
+    if limit:
+        limit_query = f"LIMIT ?"
+        values.append(limit)
+    else:
+        limit_query = ""
+    cursor.execute(f"""
+    SELECT
+        PatrolID,
+        PatrolGroupID,
+        g.Name AS PatrolGroupName,
+        s.FirstName||" "||s.LastName AS SupervisorName,
+        Date,
+        Session,
+        Holiday,
+        COALESCE(p.Attendace,0) AS Attendance,
+        COALESCE(p.AvgHours,0) AS AverageHoursEarned,
+        COALESCE(p.TotalHours,0) AS TotalHoursEarned
+    FROM Patrol
+    LEFT JOIN PatrolGroup AS g ON Patrol.PatrolGroupID = g.PatrolGroupID
+    LEFT JOIN Supervisor AS s ON g.SupervisorID = s.SupervisorID
+    LEFT JOIN (
+        SELECT
+            PatrolID,
+            COUNT(AthleteID) AS Attendance,
+            AVG(Hours) AS AvgHours,
+            SUM(Hours) AS TotalHours
+        FROM Athlete_Patrol
+        GROUP BY PatrolID
+    ) AS p ON Patrol.PatrolID = p.PatrolID
+    {filter_query}
+    {sort_query}
+    {limit_query}
+    """, values)
+    records = [[attr for i,attr in enumerate(row) if i in columns] for row in cursor.fetchall()]
+    return records
+
+def view_volunteeractivities(conn:sqlite3.Connection,
+                             sort_attr:str,
+                             sort_dir:bool,
+                             filters:dict,
+                             columns:list[int],
+                             limit:int|None=None):
+    cursor = conn.cursor()
+    values = []
+    sort_query = f"ORDER BY {sort_attr} {'ASC' if sort_dir else 'DESC'}"
+    filter_queries = []
+    for attribute,restriction in filters.items():
+        query = None
+        if isinstance(restriction,str):
+            query = f"{attribute} LIKE ?"
+            values.append(f"%{restriction}%")
+        if isinstance(restriction,tuple) and len(restriction)==2:
+            query = f"{attribute} BETWEEN ? AND ?"
+            values.extend(restriction)
+        if isinstance(restriction,list):
+            query = f"{attribute} IN ({",".join("?" for _ in restriction)})"
+            values.extend(restriction)
+        if query:
+            filter_queries.append(query)
+    if len(filter_queries)>0:
+        filter_query = "WHERE " + " AND ".join(filter_queries)
+    else:
+        filter_query = ""
+    if limit:
+        limit_query = f"LIMIT ?"
+        values.append(limit)
+    else:
+        limit_query = ""
+    cursor.execute(f"""
+    SELECT
+        ActivityID,
+        Name,
+        SupervisorID,
+        s.FirstName||" "||s.LastName AS SupervisorName,
+        Type,
+        Date,
+        FundsRaised,
+        PercFundsRaised,
+        FundsRaised*PercFundsRaised/100 AS AthleteGrantContribution,
+        FundsRaised/COALESCE(v.Attendance,1) AS FundsRaisedPerAthlete,
+        COALESCE(v.Attendace,0) AS Attendance,
+        COALESCE(v.AvgHours,0) AS AverageHoursEarned,
+        COALESCE(v.TotalHours,0) AS TotalHoursEarned
+    FROM VolunteerActivity
+    LEFT JOIN Supervisor AS s ON VolunteerActivity.SupervisorID = s.SupervisorID
+    LEFT JOIN (
+        SELECT
+            ActivityID,
+            COUNT(AthleteID) AS Attendance,
+            AVG(Hours) AS AvgHours,
+            SUM(Hours) AS TotalHours
+        FROM Athlete_Volunteer
+        GROUP BY ActivityID
+    ) AS v ON VolunteerActivity.ActivityID = v.ActivityID
+    {filter_query}
+    {sort_query}
+    {limit_query}
+    """, values)
+    records = [[attr for i,attr in enumerate(row) if i in columns] for row in cursor.fetchall()]
+    return records
+
+def view_competitions(conn:sqlite3.Connection,
+                      sort_attr:str,
+                      sort_dir:bool,
+                      filters:dict,
+                      columns:list[int],
+                      limit:int|None=None):
+    cursor = conn.cursor()
+    values = []
+    sort_query = f"ORDER BY {sort_attr} {'ASC' if sort_dir else 'DESC'}"
+    filter_queries = []
+    for attribute,restriction in filters.items():
+        query = None
+        if isinstance(restriction,str):
+            query = f"{attribute} LIKE ?"
+            values.append(f"%{restriction}%")
+        if isinstance(restriction,tuple) and len(restriction)==2:
+            query = f"{attribute} BETWEEN ? AND ?"
+            values.extend(restriction)
+        if isinstance(restriction,list):
+            query = f"{attribute} IN ({",".join("?" for _ in restriction)})"
+            values.extend(restriction)
+        if query:
+            filter_queries.append(query)
+    if len(filter_queries)>0:
+        filter_query = "WHERE " + " AND ".join(filter_queries)
+    else:
+        filter_query = ""
+    if limit:
+        limit_query = f"LIMIT ?"
+        values.append(limit)
+    else:
+        limit_query = ""
+    cursor.execute(f"""
+    SELECT
+        CompetitionID,
+        Name,
+        Season,
+        Discipline,
+        Location,
+        StartDate,
+        EndDate,
+        Importance,
+        COALESCE(c.Races,0) AS Races,
+        COALESCE(c.Competitors,0) AS Competitors,
+        COALESCE(c.Results,0) AS Results
+    FROM Competition
+    LEFT JOIN (
+        SELECT
+            CompetitionID,
+            COUNT(DISTINCT RaceID) AS Races,
+            COUNT(DISTINCT Athlete_Result.AthleteID) AS Competitors,
+            COUNT(DISTINCT ResultID) AS Results
+        FROM Race
+        LEFT JOIN Result ON Race.RaceID = Result.RaceID
+        LEFT JOIN Athlete_Result ON Result.ResultID = Athlete_Result.ResultID
+        GROUP BY CompetitionID
+    ) as c ON Competition.CompetitionID = c.CompetitionID
+    {filter_query}
+    {sort_query}
+    {limit_query}
+    """, values)
+    records = [[attr for i,attr in enumerate(row) if i in columns] for row in cursor.fetchall()]
+    return records
+
+def view_events(conn:sqlite3.Connection,
+                             sort_attr:str,
+                             sort_dir:bool,
+                             filters:dict,
+                             columns:list[int],
+                             limit:int|None=None):
+    cursor = conn.cursor()
+    values = []
+    sort_query = f"ORDER BY {sort_attr} {'ASC' if sort_dir else 'DESC'}"
+    filter_queries = []
+    for attribute,restriction in filters.items():
+        query = None
+        if isinstance(restriction,str):
+            query = f"{attribute} LIKE ?"
+            values.append(f"%{restriction}%")
+        if isinstance(restriction,tuple) and len(restriction)==2:
+            query = f"{attribute} BETWEEN ? AND ?"
+            values.extend(restriction)
+        if isinstance(restriction,list):
+            query = f"{attribute} IN ({",".join("?" for _ in restriction)})"
+            values.extend(restriction)
+        if query:
+            filter_queries.append(query)
+    if len(filter_queries)>0:
+        filter_query = "WHERE " + " AND ".join(filter_queries)
+    else:
+        filter_query = ""
+    if limit:
+        limit_query = f"LIMIT ?"
+        values.append(limit)
+    else:
+        limit_query = ""
+    cursor.execute(f"""
+    SELECT
+        EventID,
+        Name,
+        Discipline,
+        TeamEvent,
+        Importance
+    FROM Event
     {filter_query}
     {sort_query}
     {limit_query}
