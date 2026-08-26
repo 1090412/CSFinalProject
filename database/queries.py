@@ -1,5 +1,5 @@
 import sqlite3
-import enums
+import database.enums as enums
 
 def create_tables(conn:sqlite3.Connection):
     cursor = conn.cursor()
@@ -881,7 +881,7 @@ def view_table(conn:sqlite3.Connection,
         filter_query = "WHERE " + " AND ".join(filter_queries)
     else:
         filter_query = ""
-    if limit:
+    if limit is not None:
         limit_query = f"LIMIT ?"
         values.append(limit)
     else:
