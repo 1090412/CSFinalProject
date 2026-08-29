@@ -1,6 +1,7 @@
 import flet as ft
 import pages.navigation as navigation
 import pages.dashboard as dashboard
+import pages.tableview as tableview
 
 
 
@@ -20,6 +21,10 @@ async def main(page:ft.Page):
         sidemenu_container.content = navigation.create_sidemenu(page,route)
         if len(path)<2:
             main_container.content = dashboard.build_page(page,route)
+        elif path[1]=="view":
+            main_container.content = tableview.build_page(page,route)
+        elif path[1]=="add":
+            pass
         else:
             pass
         page.update()

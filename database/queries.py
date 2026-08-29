@@ -643,17 +643,17 @@ def add_athlete_result(conn:sqlite3.Connection,
 select_sql_statement = {
     "Athlete":"""
     SELECT
-        AthleteID,
-        FirstName||" "||LastName AS Name,
-        FirstName,
-        LastName,
-        Gender,
-        DOB,
-        MainDiscipline,
-        PatrolGroupID,
-        Phone,
-        Email,
-        Active,
+        Athlete.AthleteID,
+        Athlete.FirstName||" "||Athlete.LastName AS Name,
+        Athlete.FirstName,
+        Athlete.LastName,
+        Athlete.Gender,
+        Athlete.DOB,
+        Athlete.MainDiscipline,
+        Athlete.PatrolGroupID,
+        Athlete.Phone,
+        Athlete.Email,
+        Athlete.Active,
         COALESCE(p.Number,0) AS Patrols,
         COALESCE(p.Total,0) AS PatrolHours,
         COALESCE(v.Number,0) AS VolunteerSessions,
@@ -669,46 +669,46 @@ select_sql_statement = {
     FROM Athlete
     LEFT JOIN (
         SELECT
-            AthleteID,
-            COUNT(PatrolID) AS Number,
-            SUM(Hours) AS Total
+            Athlete_Patrol.AthleteID,
+            COUNT(Athlete_Patrol.PatrolID) AS Number,
+            SUM(Athlete_Patrol.Hours) AS Total
         FROM Athlete_Patrol
-        GROUP BY AthleteID
+        GROUP BY Athlete_Patrol.AthleteID
     ) AS p ON Athlete.AthleteID = p.AthleteID
     LEFT JOIN (
         SELECT
-            AthleteID,
-            COUNT(ActivityID) AS Number,
-            SUM(Hours) AS Total
+            Athlete_Volunteer.AthleteID,
+            COUNT(Athlete_Volunteer.ActivityID) AS Number,
+            SUM(Athlete_Volunteer.Hours) AS Total
         FROM Athlete_Volunteer
-        GROUP BY AthleteID
+        GROUP BY Athlete_Volunteer.AthleteID
     ) AS v ON Athlete.AthleteID = v.AthleteID
     LEFT JOIN (
         SELECT
-            AthleteID,
+            Athlete_Result.AthleteID,
             COUNT(DISTINCT Race.CompetitionID) AS NumCompetitions,
             COUNT(DISTINCT Race.RaceID) AS NumRaces
         FROM Athlete_Result
         LEFT JOIN Result ON Athlete_Result.ResultID = Result.ResultID
         LEFT JOIN Race ON Result.RaceID = Race.RaceID
-        GROUP BY AthleteID
+        GROUP BY Athlete_Result.AthleteID
     ) AS c ON Athlete.AthleteID = c.AthleteID
     LEFT JOIN (
         SELECT
-            AthleteID,
-            COUNT(DISTINCT AwardID) AS Number
+            Requalification.AthleteID,
+            COUNT(DISTINCT Requalification.AwardID) AS Number
         FROM Requalification
-        GROUP BY AthleteID
+        GROUP BY Requalification.AthleteID
     ) AS q ON Athlete.AthleteID = q.AthleteID
     """,
     "Supervisor":"""
     SELECT
-        SupervisorID,
-        FirstName||" "||LastName AS Name,
-        FirstName,
-        LastName,
-        Phone,
-        Email,
+        Supervisor.SupervisorID,
+        Supervisor.FirstName||" "||Supervisor.LastName AS Name,
+        Supervisor.FirstName,
+        Supervisor.LastName,
+        Supervisor.Phone,
+        Supervisor.Email,
         COALESCE(p.NumGroups,0) AS PatrolGroups,
         COALESCE(p.NumPatrols,0) AS PatrolsSupervised,
         COALESCE(v.Number,0) AS VolunteersSupervised,
@@ -716,33 +716,33 @@ select_sql_statement = {
     FROM Supervisor
     LEFT JOIN (
         SELECT
-            SupervisorID,
-            COUNT(PatrolGroupID) AS NumGroups,
+            PatrolGroup.SupervisorID,
+            COUNT(PatrolGroup.PatrolGroupID) AS NumGroups,
             COUNT(Patrol.PatrolID) AS NumPatrols
         FROM PatrolGroup
         LEFT JOIN Patrol ON PatrolGroup.PatrolGroupID = Patrol.PatrolGroupID
-        GROUP BY SupervisorID
+        GROUP BY PatrolGroup.SupervisorID
     ) AS p ON Supervisor.SupervisorID = p.SupervisorID
     LEFT JOIN (
         SELECT
-            SupervisorID,
-            COUNT(ActivityID) AS Number
+            VolunteerActivity.SupervisorID,
+            COUNT(VolunteerActivity.ActivityID) AS Number
         FROM VolunteerActivity
-        GROUP BY SupervisorID
+        GROUP BY VolunteerActivity.SupervisorID
     ) AS v ON Supervisor.SupervisorID = v.SupervisorID
     LEFT JOIN (
         SELECT
-            SupervisorID,
-            COUNT(AthleteID) AS Number
+            Requalification.SupervisorID,
+            COUNT(Requalification.AthleteID) AS Number
         FROM Requalification
-        GROUP BY SupervisorID
+        GROUP BY Requalification.SupervisorID
     ) AS q ON Supervisor.SupervisorID = q.SupervisorID
     """,
     "PatrolGroup":"""
     SELECT
-        PatrolGroupID,
-        Name,
-        SupervisorID,
+        PatrolGroup.PatrolGroupID,
+        PatrolGroup.Name,
+        PatrolGroup.SupervisorID,
         s.FirstName||" "||s.LastName AS SupervisorName,
         COALESCE(p.NumPatrols,0) AS Patrols,
         COALESCE(p.AvgAthletes,0) AS AverageAttendance,
@@ -751,8 +751,8 @@ select_sql_statement = {
     LEFT JOIN Supervisor AS s ON PatrolGroup.SupervisorID = s.SupervisorID
     LEFT JOIN (
         SELECT
-            PatrolGroupID,
-            COUNT(PatrolID) AS NumPatrols,
+            Patrol.PatrolGroupID,
+            COUNT(Patrol.PatrolID) AS NumPatrols,
             AVG(a.Attendance) AS AvgAthletes,
             COUNT(DISTINCT Athlete_Patrol.AthleteID) AS NumAthletes
         FROM Patrol
@@ -760,18 +760,18 @@ select_sql_statement = {
             SELECT PatrolID, COUNT(AthleteID) AS Attendance FROM Athlete_Patrol GROUP BY PatrolID
         ) AS a ON Patrol.PatrolID = a.PatrolID
         LEFT JOIN Athlete_Patrol ON Patrol.PatrolID = Athlete_Patrol.PatrolID
-        GROUP BY PatrolGroupID
+        GROUP BY Patrol.PatrolGroupID
     ) AS p ON PatrolGroup.PatrolGroupID = p.PatrolGroupID
     """,
     "Patrol":"""
     SELECT
-        PatrolID,
-        PatrolGroupID,
+        Patrol.PatrolID,
+        Patrol.PatrolGroupID,
         g.Name AS PatrolGroupName,
         s.FirstName||" "||s.LastName AS SupervisorName,
-        Date,
-        Session,
-        Holiday,
+        Patrol.Date,
+        Patrol.Session,
+        Patrol.Holiday,
         COALESCE(p.Attendance,0) AS Attendance,
         COALESCE(p.AvgHours,0) AS AverageHoursEarned,
         COALESCE(p.TotalHours,0) AS TotalHoursEarned
@@ -780,26 +780,26 @@ select_sql_statement = {
     LEFT JOIN Supervisor AS s ON g.SupervisorID = s.SupervisorID
     LEFT JOIN (
         SELECT
-            PatrolID,
-            COUNT(AthleteID) AS Attendance,
-            AVG(Hours) AS AvgHours,
-            SUM(Hours) AS TotalHours
+            Athlete_Patrol.PatrolID,
+            COUNT(Athlete_Patrol.AthleteID) AS Attendance,
+            AVG(Athlete_Patrol.Hours) AS AvgHours,
+            SUM(Athlete_Patrol.Hours) AS TotalHours
         FROM Athlete_Patrol
-        GROUP BY PatrolID
+        GROUP BY Athlete_Patrol.PatrolID
     ) AS p ON Patrol.PatrolID = p.PatrolID
     """,
     "VolunteerActivity":"""
     SELECT
-        ActivityID,
-        Name,
-        SupervisorID,
+        VolunteerActivity.ActivityID,
+        VolunteerActivity.Name,
+        VolunteerActivity.SupervisorID,
         s.FirstName||" "||s.LastName AS SupervisorName,
-        Type,
-        Date,
-        FundsRaised,
-        PercFundsReceived,
-        FundsRaised*PercFundsReceived/100 AS AthleteGrantContribution,
-        FundsRaised/COALESCE(v.Attendance,1) AS FundsRaisedPerAthlete,
+        VolunteerActivity.Type,
+        VolunteerActivity.Date,
+        VolunteerActivity.FundsRaised,
+        VolunteerActivity.PercFundsReceived,
+        VolunteerActivity.FundsRaised*VolunteerActivity.PercFundsReceived/100 AS AthleteGrantContribution,
+        VolunteerActivity.FundsRaised/COALESCE(v.Attendance,1) AS FundsRaisedPerAthlete,
         COALESCE(v.Attendance,0) AS Attendance,
         COALESCE(v.AvgHours,0) AS AverageHoursEarned,
         COALESCE(v.TotalHours,0) AS TotalHoursEarned
@@ -807,48 +807,65 @@ select_sql_statement = {
     LEFT JOIN Supervisor AS s ON VolunteerActivity.SupervisorID = s.SupervisorID
     LEFT JOIN (
         SELECT
-            ActivityID,
-            COUNT(AthleteID) AS Attendance,
-            AVG(Hours) AS AvgHours,
-            SUM(Hours) AS TotalHours
+            Athlete_Volunteer.ActivityID,
+            COUNT(Athlete_Volunteer.AthleteID) AS Attendance,
+            AVG(Athlete_Volunteer.Hours) AS AvgHours,
+            SUM(Athlete_Volunteer.Hours) AS TotalHours
         FROM Athlete_Volunteer
-        GROUP BY ActivityID
+        GROUP BY Athlete_Volunteer.ActivityID
     ) AS v ON VolunteerActivity.ActivityID = v.ActivityID
     """,
     "Competition":"""
     SELECT
-        CompetitionID,
-        Name,
-        Season,
-        Discipline,
-        Location,
-        StartDate,
-        EndDate,
-        Importance,
+        Competition.CompetitionID,
+        Competition.Name,
+        Competition.Season,
+        Competition.Discipline,
+        Competition.Location,
+        Competition.StartDate,
+        Competition.EndDate,
+        Competition.Importance,
         COALESCE(c.Races,0) AS Races,
         COALESCE(c.Competitors,0) AS Competitors,
         COALESCE(c.Results,0) AS Results
     FROM Competition
     LEFT JOIN (
         SELECT
-            CompetitionID,
-            COUNT(DISTINCT RaceID) AS Races,
+            Race.CompetitionID,
+            COUNT(DISTINCT Race.RaceID) AS Races,
             COUNT(DISTINCT Athlete_Result.AthleteID) AS Competitors,
-            COUNT(DISTINCT ResultID) AS Results
+            COUNT(DISTINCT Result.ResultID) AS Results
         FROM Race
         LEFT JOIN Result ON Race.RaceID = Result.RaceID
         LEFT JOIN Athlete_Result ON Result.ResultID = Athlete_Result.ResultID
-        GROUP BY CompetitionID
+        GROUP BY Race.CompetitionID
     ) as c ON Competition.CompetitionID = c.CompetitionID
     """,
     "Event":"""
     SELECT
-        EventID,
-        Name,
-        Discipline,
-        TeamEvent,
-        Importance
+        Event.EventID,
+        Event.Name,
+        Event.Discipline,
+        Event.TeamEvent,
+        Event.Importance
     FROM Event
+    """,
+    "Qualification":"""
+    SELECT
+        Qualification.QualificationID,
+        Qualification.Name,
+        COALESCE(q.Requals,0) AS Requals,
+        COALESCE(q.Athletes,0) AS Athletes
+    FROM Qualification
+    LEFT JOIN (
+        SELECT
+            Requalification.QualificationID,
+            COUNT(Requalification.AthleteID) AS Requals,
+            COUNT(DISTINCT Requalification.AthleteID) AS Athletes
+        FROM Qualification
+        LEFT JOIN Requalification ON Qualification.QualificationID = Requalification.QualificationID
+        GROUP BY Requalification.QualificationID
+    ) as q ON Qualification.QualificationID = q.QualificationID
     """
 }
 
@@ -858,7 +875,8 @@ def view_table(conn:sqlite3.Connection,
                sort_dir:bool,
                filters:dict,
                columns:list[int],
-               limit:int|None=None):
+               limit:int|None=None,
+               offset:int|None=None):
     cursor = conn.cursor()
     values = []
     select_query = select_sql_statement[table]
@@ -881,7 +899,11 @@ def view_table(conn:sqlite3.Connection,
         filter_query = "WHERE " + " AND ".join(filter_queries)
     else:
         filter_query = ""
-    if limit is not None:
+    if limit is not None and offset is not None:
+            limit_query = f"LIMIT ? OFFSET ?"
+            values.append(limit)
+            values.append(offset)
+    elif limit is not None:
         limit_query = f"LIMIT ?"
         values.append(limit)
     else:
@@ -894,6 +916,37 @@ def view_table(conn:sqlite3.Connection,
     """, values)
     records = [[attr for i,attr in enumerate(row) if i in columns] for row in cursor.fetchall()]
     return records
+
+
+
+def table_size(conn:sqlite3.Connection,
+               table:str,
+               column:str,
+               filters:dict):
+    cursor = conn.cursor()
+    values = []
+    filter_queries = []
+    for attribute,restriction in filters.items():
+        query = None
+        if isinstance(restriction,str):
+            query = f"{attribute} LIKE ?"
+            values.append(f"%{restriction}%")
+        if isinstance(restriction,tuple) and len(restriction)==2:
+            query = f"{attribute} BETWEEN ? AND ?"
+            values.extend(restriction)
+        if isinstance(restriction,list):
+            query = f"{attribute} IN ({",".join("?" for _ in restriction)})"
+            values.extend(restriction)
+        if query:
+            filter_queries.append(query)
+    if len(filter_queries)>0:
+        filter_query = "WHERE " + " AND ".join(filter_queries)
+    else:
+        filter_query = ""
+    cursor.execute(f"""
+    SELECT COUNT({column}) FROM {table} {filter_query}
+    """)
+    return cursor.fetchone()[0]
 
 
 

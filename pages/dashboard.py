@@ -1,6 +1,5 @@
 import flet as ft
 import random
-import pages.navigation as navigation
 
 information_cards = {
     "home":[
@@ -127,7 +126,7 @@ def create_summary(page:ft.Page, route:str):
 
 minitables = {
     "home":[
-        ("Athlete", ft.Icons.PERSON, ("Name","Age","Gender"), (("Perosn 1",23,"M"),("Perosn 2",19,"F"),("Perosn 3",32,"F")), 10)
+        ("Athlete", "/athletes/view", ft.Icons.PERSON, ("Name","Age","Gender"), (("Perosn 1",23,"M"),("Perosn 2",19,"F"),("Perosn 3",32,"F")), 10)
     ],
     "athletes":[
 
@@ -180,7 +179,7 @@ def create_minitable(page:ft.Page, route:str):
                 bgcolor=ft.Colors.SURFACE_CONTAINER,
                 content=ft.Column(
                     controls=[
-                        ft.Text("Top Athletes", text_align=ft.TextAlign.LEFT, size=24, weight=ft.FontWeight.BOLD),
+                        ft.Text(f"{name} Table", text_align=ft.TextAlign.LEFT, size=24, weight=ft.FontWeight.BOLD),
                     ] + [
                         ft.Row(
                             [ft.Text("", size=15, expand=1)] +
@@ -194,10 +193,10 @@ def create_minitable(page:ft.Page, route:str):
                             [ft.Text(str(cell), text_align=ft.TextAlign.CENTER, size=15, expand=3) for cell in row[1:]]
                         ) for row in data
                     ] + [
-                        ft.TextButton(f"View All {size} Records", icon=ft.Icons.SEARCH)
+                        ft.TextButton(f"View All {size} Records", icon=ft.Icons.SEARCH, on_click=lambda _,link=link: page.run_task(page.push_route,link))
                     ]
                 )
-            ) for name,icon,columns,data,size in minitables[route] for i in range(2)
+            ) for name,link,icon,columns,data,size in minitables[route] for i in range(2)
         ]
     )
     return cont
