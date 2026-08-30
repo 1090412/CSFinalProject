@@ -4,17 +4,17 @@ import database.queries as queries
 import database.enums as enums
 
 conn = sqlite3.connect("database/database.db")
-for i in range(100):
-    queries.add_athlete(
+queries.add_supervisor(
+    conn=conn,
+    firstname="Gary",
+    lastname="Gary",
+    phone="0400000000",
+    email="something@icloud.com"
+)
+for i in range(10):
+    queries.add_patrolgroup(
         conn=conn,
-        firstname="John",
-        lastname="Smith",
-        gender=random.choice(["Male","Female","Not Specified"]),
-        dob = "2000-12-25",
-        maindiscipline=random.choice(enums.DISCIPLINES),
-        patrolgroupid=random.randint(1,16),
-        phone="0400000000",
-        email="something@gmail.com",
-        active=True
+        name=f"{i}th Patrol Group",
+        supervisorid=1
     )
 conn.close()

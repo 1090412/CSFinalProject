@@ -2,6 +2,7 @@ import flet as ft
 import pages.navigation as navigation
 import pages.dashboard as dashboard
 import pages.tableview as tableview
+import pages.edit as edit
 
 
 
@@ -24,12 +25,13 @@ async def main(page:ft.Page):
         elif path[1]=="view":
             main_container.content = tableview.build_page(page,route)
         elif path[1]=="add":
-            pass
+            main_container.content = edit.build_page(page,route,0)
         else:
-            pass
+            main_container.content = edit.build_page(page,route,int(path[1]))
         page.update()
 
     page.on_route_change = on_route_change
+    page.padding = 0
     page.add(
         ft.Row(
             expand=True,

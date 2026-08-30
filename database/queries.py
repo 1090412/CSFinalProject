@@ -640,6 +640,324 @@ def add_athlete_result(conn:sqlite3.Connection,
 
 
 
+def edit_athlete(conn:sqlite3.Connection,
+                 athleteid:int,
+                 firstname:str,
+                 lastname:str,
+                 gender:int|str,
+                 dob:str,
+                 maindiscipline:int|str,
+                 patrolgroupid:int|None,
+                 phone:str,
+                 email:str,
+                 active:bool):
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE Athlete
+    SET
+        FirstName = ?,
+        LastName = ?,
+        Gender = ?,
+        DOB = ?,
+        MainDiscipline = ?,
+        PatrolGroupID = ?,
+        Phone = ?,
+        Email = ?,
+        Active = ?
+    WHERE AthleteID = ?
+    """,
+    (
+        firstname,
+        lastname,
+        enums.GENDERS[gender] if isinstance(gender,int) else gender,
+        dob,
+        enums.DISCIPLINES[maindiscipline] if isinstance(maindiscipline,int) else maindiscipline,
+        patrolgroupid,
+        phone,
+        email,
+        active,
+        athleteid
+    ))
+    conn.commit()
+
+def edit_supervisor(conn:sqlite3.Connection,
+                    supervisorid:int,
+                    firstname:str,
+                    lastname:str,
+                    phone:str,
+                    email:str):
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE Supervisor
+    SET
+        FirstName = ?,
+        LastName = ?,
+        Phone = ?,
+        Email = ?
+    WHERE SupervisorID = ?
+    """,
+    (
+        firstname,
+        lastname,
+        phone,
+        email,
+        supervisorid
+    ))
+    conn.commit()
+
+def edit_patrolgroup(conn:sqlite3.Connection,
+                     patrolgroupid:int,
+                     name:str,
+                     supervisorid:int):
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE PatrolGroup
+    SET
+        Name = ?,
+        SupervisorID = ?
+    WHERE PatrolGroupID = ?
+    """,
+    (
+        name,
+        supervisorid,
+        patrolgroupid
+    ))
+    conn.commit()
+
+def edit_patrol(conn:sqlite3.Connection,
+                patrolid:int,
+                patrolgroupid:int,
+                date:str,
+                session:int|str,
+                holiday:bool):
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE Patrol
+    SET
+        PatrolGroupID = ?,
+        Date = ?,
+        Session = ?,
+        Holiday = ?
+    WHERE PatrolID = ?
+    """,
+    (
+        patrolgroupid,
+        date,
+        enums.SESSIONS[session] if isinstance(session,int) else session,
+        holiday,
+        patrolid
+    ))
+    conn.commit()
+
+def edit_athlete_patrol(conn:sqlite3.Connection,
+                        athleteid:int,
+                        patrolid:int,
+                        hours:float):
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE Athlete_Patrol
+    SET
+        Hours = ?
+    WHERE AthleteID = ? AND PatrolID = ?
+    """,
+    (
+        hours,
+        athleteid,
+        patrolid
+    ))
+    conn.commit()
+
+def edit_volunteeractivity(conn:sqlite3.Connection,
+                           activityid:int,
+                           supervisorid:int,
+                           name:str,
+                           type:int|str,
+                           date:str,
+                           fundsraised:float,
+                           percfundsreceived:float):
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE VolunteerActivity
+    SET
+        SupervisorID = ?,
+        Name = ?,
+        Type = ?,
+        Date = ?,
+        FundsRaised = ?,
+        PercFundsReceived = ?
+    WHERE ActivityID = ?
+    """,
+    (
+        supervisorid,
+        name,
+        enums.VOLUNTEER_TYPES[type] if isinstance(type,int) else type,
+        date,
+        fundsraised,
+        percfundsreceived,
+        activityid
+    ))
+    conn.commit()
+
+def edit_athlete_volunteer(conn:sqlite3.Connection,
+                           athleteid:int,
+                           activityid:int,
+                           hours:float):
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE Athlete_Volunteer
+    SET
+        Hours = ?
+    WHERE AthleteID = ? AND ActivityID = ?
+    """,
+    (
+        hours,
+        athleteid,
+        activityid
+    ))
+    conn.commit()
+
+def edit_qualificationaward(conn:sqlite3.Connection,
+                            awardid:int,
+                            name:str):
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE QualificationAward
+    SET
+        Name = ?
+    WHERE AwardID = ?
+    """,
+    (
+        name,
+        awardid
+    ))
+    conn.commit()
+
+def edit_requalification(conn:sqlite3.Connection,
+                         athleteid:int,
+                         awardid:int,
+                         supervisorid:int,
+                         date:str):
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE Requalification
+    SET
+        SupervisorID = ?,
+        Date = ?
+    WHERE AthleteID = ? AND AwardID = ?
+    """,
+    (
+        supervisorid,
+        date,
+        athleteid,
+        awardid
+    ))
+    conn.commit()
+
+def edit_competition(conn:sqlite3.Connection,
+                     competitionid:int,
+                     name:str,
+                     season:int,
+                     discipline:int|str,
+                     location:str|None,
+                     startdate:str,
+                     enddate:str|None,
+                     importance:int):
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE Competition
+    SET
+        Name = ?,
+        Season = ?,
+        Discipline = ?,
+        Location = ?,
+        StartDate = ?,
+        EndDate = ?,
+        Importance = ?
+    WHERE CompetitionID = ?
+    """,
+    (
+        name,
+        season,
+        enums.DISCIPLINES[discipline] if isinstance(discipline,int) else discipline,
+        location,
+        startdate,
+        enddate,
+        importance,
+        competitionid
+    ))
+    conn.commit()
+
+def edit_event(conn:sqlite3.Connection,
+               eventid:int,
+               name:str,
+               discipline:int|str,
+               teamevent:bool,
+               importance:int):
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE Event
+    SET
+        Name = ?,
+        Discipline = ?,
+        TeamEvent = ?,
+        Importance = ?
+    WHERE EventID = ?
+    """,
+    (
+        name,
+        enums.DISCIPLINES[discipline] if isinstance(discipline,int) else discipline,
+        teamevent,
+        importance,
+        eventid
+    ))
+    conn.commit()
+
+def edit_race(conn:sqlite3.Connection,
+              raceid:int,
+              competitionid:int,
+              eventid:int,
+              agegroup:int|str,
+              gender:int|str):
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE Race
+    SET
+        CompetitionID = ?,
+        EventID = ?,
+        AgeGroup = ?,
+        Gender = ?
+    WHERE RaceID = ?
+    """,
+    (
+        competitionid,
+        eventid,
+        enums.AGE_GROUPS[agegroup] if isinstance(agegroup,int) else agegroup,
+        enums.GENDERS[gender] if isinstance(gender,int) else gender,
+        raceid
+    ))
+    conn.commit()
+
+def edit_result(conn:sqlite3.Connection,
+                resultid:int,
+                raceid:int,
+                ranking:int):
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE Result
+    SET
+        RaceID = ?,
+        Ranking = ?
+    WHERE ResultID = ?
+    """,
+    (
+        raceid,
+        ranking,
+        resultid
+    ))
+    conn.commit()
+
+
+
 select_sql_statement = {
     "Athlete":"""
     SELECT
@@ -884,6 +1202,9 @@ def view_table(conn:sqlite3.Connection,
     filter_queries = []
     for attribute,restriction in filters.items():
         query = None
+        if isinstance(restriction,int):
+            query = f"{attribute} = ?"
+            values.append(restriction)
         if isinstance(restriction,str):
             query = f"{attribute} LIKE ?"
             values.append(f"%{restriction}%")

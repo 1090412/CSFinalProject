@@ -126,7 +126,7 @@ def create_summary(page:ft.Page, route:str):
 
 minitables = {
     "home":[
-        ("Athlete", "/athletes/view", ft.Icons.PERSON, ("Name","Age","Gender"), (("Perosn 1",23,"M"),("Perosn 2",19,"F"),("Perosn 3",32,"F")), 10)
+        ("Athlete", "/athletes", ft.Icons.PERSON, ("Name","Age","Gender"), (("Perosn 1",23,"M"),("Perosn 2",19,"F"),("Perosn 3",32,"F")), 10)
     ],
     "athletes":[
 
@@ -146,11 +146,11 @@ minitables = {
 }
 
 def create_minitable(page:ft.Page, route:str):
-    def buttons(table):
+    def buttons(table,link):
         return (
-            (ft.Icons.ADD,f"Add {table}"),
-            (ft.Icons.UPLOAD,"Export Table"),
-            (ft.Icons.SEARCH,f"View {table} Table"),
+            (ft.Icons.ADD,f"Add {table}",link+"/add"),
+            (ft.Icons.UPLOAD,"Export Table",link+"/view"),
+            (ft.Icons.SEARCH,f"View {table} Table",link+"/view"),
         )
     cont = ft.Column(
         alignment=ft.MainAxisAlignment.CENTER,
@@ -163,6 +163,7 @@ def create_minitable(page:ft.Page, route:str):
                         content=ft.Text(text,size=16,weight=ft.FontWeight.BOLD),
                         icon=ft.Icon(icon,size=20),
                         expand=True,
+                        on_click=lambda _,dest=dest: page.run_task(page.push_route,dest),
                         style = ft.ButtonStyle(
                             bgcolor=ft.Colors.SURFACE_CONTAINER,
                             color=ft.Colors.PRIMARY,
@@ -170,7 +171,7 @@ def create_minitable(page:ft.Page, route:str):
                             padding=ft.Padding(0,20,0,20),
                             shape=ft.RoundedRectangleBorder(radius=10),
                         )
-                    ) for icon,text in buttons(name)
+                    ) for icon,text,dest in buttons(name,link)
                 ]
             ) if i==0 else
             ft.Container(

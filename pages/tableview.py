@@ -1,7 +1,7 @@
 import flet as ft
 import sqlite3
 import database.queries as queries
-import database.enums as enums
+import database.columns as columns
 
 DATABASE = "database/database.db"
 
@@ -24,96 +24,6 @@ icons = {
     "qualifications":ft.Icons.PERSON,
 }
 
-columns = {
-    "athletes": [
-        ("Athlete.AthleteID", "Athlete ID", "id"),
-        ("Name", "Name", "text"),
-        ("Athlete.FirstName", "First Name", "text"),
-        ("Athlete.LastName", "Last Name", "text"),
-        ("Athlete.Gender", "Gender", "enum", (("Male","M"),("Female","F"),("Not Specified","-"))),
-        ("Athlete.DOB", "Date of Birth", "date"),
-        ("Athlete.MainDiscipline", "Main Discipline", "enum", (("Surf","S"),("Beach","Be"),("Boats","Bo"),("Lifesaving","L"),)),
-        ("Athlete.PatrolGroupID", "Patrol Group ID", "id"),
-        ("Athlete.Phone", "Phone", "text"),
-        ("Athlete.Email", "Email", "text"),
-        ("Athlete.Active", "Active", "enum", ((1,"Active"),(0,"Inactive"))),
-        ("Patrols", "Patrols", "number"),
-        ("PatrolHours", "Patrol Hours", "number"),
-        ("VolunteerSessions", "Volunteer Sessions", "number"),
-        ("VolunteerHours", "Volunteer Hours", "number"),
-        ("TotalHours", "Total Hours", "number"),
-        ("Competitions", "Competitions", "number"),
-        ("Races", "Races", "number"),
-        ("Qualifications", "Qualifications", "number"),
-        ("PatrolPoints", "Patrol Points", "number"),
-        ("VolunteerPoints", "Volunteer Points", "number"),
-        ("CompetitionPoints", "Competition Points", "number"),
-        ("TotalPoints", "Total Points", "number")
-    ],
-    "competitions": [
-        ("Competition.CompetitionID", "Competition ID", "id"),
-        ("Competition.Name", "Name", "text"),
-        ("Competition.Season", "Season", "text"),
-        ("Competition.Discipline", "Discipline", "enum", (("Surf","S"),("Beach","Be"),("Boats","Bo"),("Lifesaving","L"),)),
-        ("Competition.Location", "Location", "text"),
-        ("Competition.StartDate", "Start Date", "date"),
-        ("Competition.EndDate", "End Date", "date"),
-        ("Competition.Importance", "Importance", "number"),
-        ("Races", "Races", "number"),
-        ("Competitors", "Competitors", "number"),
-        ("Results", "Results", "number")
-    ],
-    "events": [
-        ("Event.EventID", "Event ID", "id"),
-        ("Event.Name", "Name", "text"),
-        ("Event.Discipline", "Discipline", "enum", (("Surf","S"),("Beach","Be"),("Boats","Bo"),("Lifesaving","L"),)),
-        ("Event.TeamEvent", "Team Event", "enum", (("Indiv.",0),("Team",1))),
-        ("Event.Importance", "Importance", "number")
-    ],
-    "patrolgroups": [
-        ("PatrolGroup.PatrolGroupID", "Patrol Group ID", "id"),
-        ("PatrolGroup.Name", "Name", "text"),
-        ("PatrolGroup.SupervisorID", "Supervisor ID", "id"),
-        ("SupervisorName", "Supervisor Name", "text"),
-        ("Patrols", "Patrols", "number"),
-        ("AverageAttendance", "Average Attendance", "number"),
-        ("UniqueAttendees", "Unique Attendees", "number")
-    ],
-    "patrols": [
-        ("Patrol.PatrolID", "Patrol ID", "id"),
-        ("Patrol.PatrolGroupID", "Patrol Group ID", "id"),
-        ("PatrolGroupName", "Patrol Group Name", "text"),
-        ("SupervisorName", "Supervisor Name", "text"),
-        ("Patrol.Date", "Date", "date"),
-        ("Patrol.Session", "Session", "enum", (("Morning","AM"),("Afternoon","PM"),("All Day","All"),)),
-        ("Patrol.Holiday", "Holiday", "enum", (("Normal",0),("Holiday",1))),
-        ("Attendance", "Attendance", "number"),
-        ("AverageHoursEarned", "Average Hours Earned", "number"),
-        ("TotalHoursEarned", "Total Hours Earned", "number")
-    ],
-    "volunteering": [
-        ("VolunteerActivity.ActivityID", "Activity ID", "id"),
-        ("VolunteerActivity.Name", "Name", "text"),
-        ("VolunteerActivity.SupervisorID", "Supervisor ID", "id"),
-        ("SupervisorName", "Supervisor Name", "text"),
-        ("VolunteerActivity.Type", "Type", "enum", (("Course Trainer","CT"),("Water Safety","WS"),("Sunday Program Help","Sun"),("Fundraiser","Fund"),("Club Chore","Club"),)),
-        ("VolunteerActivity.Date", "Date", "date"),
-        ("VolunteerActivity.FundsRaised", "Funds Raised", "number"),
-        ("VolunteerActivity.PercFundsReceived", "Percentage Funds Received", "number"),
-        ("AthleteGrantContribution", "Athlete Grant Contribution", "number"),
-        ("FundsRaisedPerAthlete", "Funds Raised Per Athlete", "number"),
-        ("Attendance", "Attendance", "number"),
-        ("AverageHoursEarned", "Average Hours Earned", "number"),
-        ("TotalHoursEarned", "Total Hours Earned", "number")
-    ],
-    "qualifications": [
-        ("Qualification.QualificationID", "Qualification ID", "id"),
-        ("Qualification.Name", "Name", "text"),
-        ("Requals", "Requalifications", "number"),
-        ("Athletes", "Athletes", "number")
-    ]
-}
-
 
 
 def create_filters(page:ft.Page, route:str, settings:dict, update_func):
@@ -124,139 +34,132 @@ def create_filters(page:ft.Page, route:str, settings:dict, update_func):
         update_func()
     def filter_button(field):
         ...
-        update_func()
     def column_button(event,field_no):
         if event.control.value and field_no not in settings["columns"]:
             settings["columns"].append(field_no)
         if not event.control.value and field_no in settings["columns"]:
             settings["columns"].remove(field_no)
-        settings["page"] = 1
-        update_func()
-    cont = ft.Row(
+    cont = ft.ExpansionPanelList(
         expand=True,
+        elevation=0,
         controls=[
-            ft.ExpansionPanelList(
-                expand=True,
-                elevation=0,
-                controls=[
-                    ft.ExpansionPanel(
-                        bgcolor=ft.Colors.SURFACE_CONTAINER,
-                        header=ft.Row(
-                            spacing=20,
-                            controls=[
-                                ft.Container(
-                                    padding=20,
-                                    expand=1,
-                                    content=ft.Row(
-                                        alignment=ft.MainAxisAlignment.CENTER,
-                                        controls=[
-                                            ft.Icon(ft.Icons.SORT, size=20, color=ft.Colors.PRIMARY),
-                                            ft.Text("Sort Options", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY)
-                                        ]
-                                    )
-                                ),
-                                ft.Container(
-                                    padding=20,
-                                    expand=1,
-                                    content=ft.Row(
-                                        alignment=ft.MainAxisAlignment.CENTER,
-                                        controls=[
-                                            ft.Icon(ft.Icons.FILTER, size=20, color=ft.Colors.PRIMARY),
-                                            ft.Text("Filter Table", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY)
-                                        ]
-                                    )
-                                ),
-                                ft.Container(
-                                    padding=20,
-                                    expand=1,
-                                    content=ft.Row(
-                                        alignment=ft.MainAxisAlignment.CENTER,
-                                        controls=[
-                                            ft.Icon(ft.Icons.SELECT_ALL, size=20, color=ft.Colors.PRIMARY),
-                                            ft.Text("Choose Columns", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY)
-                                        ]
-                                    )
-                                ),
-                            ]
+            ft.ExpansionPanel(
+                bgcolor=ft.Colors.SURFACE_CONTAINER,
+                header=ft.Row(
+                    spacing=20,
+                    controls=[
+                        ft.Container(
+                            padding=20,
+                            expand=1,
+                            content=ft.Row(
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                controls=[
+                                    ft.Icon(ft.Icons.SORT, size=20, color=ft.Colors.PRIMARY),
+                                    ft.Text("Sort Options", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY)
+                                ]
+                            )
                         ),
-                        content=ft.Row(
-                            controls=[
-                                ft.Container(
-                                    padding=20,
-                                    expand=1,
-                                    content=ft.Column(
-                                        spacing=10,
+                        ft.Container(
+                            padding=20,
+                            expand=1,
+                            content=ft.Row(
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                controls=[
+                                    ft.Icon(ft.Icons.FILTER, size=20, color=ft.Colors.PRIMARY),
+                                    ft.Text("Filter Table", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY)
+                                ]
+                            )
+                        ),
+                        ft.Container(
+                            padding=20,
+                            expand=1,
+                            content=ft.Row(
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                controls=[
+                                    ft.Icon(ft.Icons.SELECT_ALL, size=20, color=ft.Colors.PRIMARY),
+                                    ft.Text("Choose Columns", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY)
+                                ]
+                            )
+                        ),
+                    ]
+                ),
+                content=ft.Row(
+                    vertical_alignment=ft.CrossAxisAlignment.START,
+                    controls=[
+                        ft.Container(
+                            padding=20,
+                            expand=1,
+                            content=ft.Column(
+                                spacing=10,
+                                controls=[
+                                    ft.Text(f"Sorted by {settings["sort"].split(".")[-1]} {"Ascending" if settings["sort_dir"] else "Descending"}", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY)
+                                ]+[
+                                    ft.Row(
                                         controls=[
-                                            ft.Text(f"Sorted by {settings["sort"].split(".")[-1]} {"Ascending" if settings["sort_dir"] else "Descending"}", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY)
-                                        ]+[
-                                            ft.Row(
-                                                controls=[
-                                                    ft.Text(field[1], size=16, width=200, expand=6),
-                                                    ft.IconButton(ft.Icons.ARROW_UPWARD_OUTLINED, on_click=lambda _,f=field[0],d=True: sort_button(f,d), icon_size=20, icon_color=ft.Colors.PRIMARY, bgcolor=ft.Colors.PRIMARY_CONTAINER if settings["sort"]==field[0] and settings["sort_dir"] else None, disabled=(settings["sort"]==field[0] and settings["sort_dir"]), expand=1),
-                                                    ft.IconButton(ft.Icons.ARROW_DOWNWARD, on_click=lambda _,f=field[0],d=False: sort_button(f,d), icon_size=20, icon_color=ft.Colors.PRIMARY, bgcolor=ft.Colors.PRIMARY_CONTAINER if settings["sort"]==field[0] and not settings["sort_dir"] else None, disabled=(settings["sort"]==field[0] and not settings["sort_dir"]), expand=1),
-                                                ]
-                                            ) for field in columns[route]
+                                            ft.Text(field[1], size=16, width=200, expand=6),
+                                            ft.IconButton(ft.Icons.ARROW_UPWARD_OUTLINED, on_click=lambda _,f=field[0],d=True: sort_button(f,d), icon_size=20, icon_color=ft.Colors.PRIMARY, bgcolor=ft.Colors.PRIMARY_CONTAINER if settings["sort"]==field[0] and settings["sort_dir"] else None, disabled=(settings["sort"]==field[0] and settings["sort_dir"]), expand=1),
+                                            ft.IconButton(ft.Icons.ARROW_DOWNWARD, on_click=lambda _,f=field[0],d=False: sort_button(f,d), icon_size=20, icon_color=ft.Colors.PRIMARY, bgcolor=ft.Colors.PRIMARY_CONTAINER if settings["sort"]==field[0] and not settings["sort_dir"] else None, disabled=(settings["sort"]==field[0] and not settings["sort_dir"]), expand=1),
                                         ]
-                                    )
-                                ),
-                                ft.Container(
-                                    padding=20,
-                                    expand=1,
-                                    border=ft.Border(
-                                        left=ft.BorderSide(width=1,color=ft.Colors.PRIMARY_FIXED_DIM),
-                                        right=ft.BorderSide(width=1,color=ft.Colors.PRIMARY_FIXED_DIM)
-                                    ),
-                                    content=ft.Column(
-                                        spacing=10,
+                                    ) for field in columns.columns[route]
+                                ]
+                            )
+                        ),
+                        ft.Container(
+                            padding=20,
+                            expand=1,
+                            border=ft.Border(
+                                left=ft.BorderSide(width=1,color=ft.Colors.PRIMARY_FIXED_DIM),
+                                right=ft.BorderSide(width=1,color=ft.Colors.PRIMARY_FIXED_DIM)
+                            ),
+                            content=ft.Column(
+                                spacing=10,
+                                controls=[
+                                    ft.Text("2 Active Filters", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY, expand=1, no_wrap=False)
+                                ]+[
+                                    ft.Container(
+                                        expand=1,
+                                        content=ft.Row(
+                                            controls=[
+                                                ft.Text(field[1], size=16, width=200, expand=3),
+                                                ft.Row(
+                                                    alignment=ft.MainAxisAlignment.END,
+                                                    expand=5,
+                                                    spacing=0,
+                                                    controls=[ft.Checkbox(label=short) for long,short in field[3]]
+                                                ) if field[2]=="enum" else
+                                                ft.RangeSlider(start_value=0,end_value=10,min=0,max=10,label="{value}",expand=5) if field[2]=="number" else
+                                                ft.Button(
+                                                    icon=ft.Icons.DATE_RANGE,
+                                                    content="Pick Date Range",
+                                                    on_click=lambda _: page.show_dialog(ft.DateRangePicker()),
+                                                    expand=5
+                                                ) if field[2]=="date" else
+                                                ft.TextField(label=f"{field[1]}",expand=5)
+                                            ]
+                                        )
+                                    ) for field in columns.columns[route]
+                                ]
+                            )
+                        ),
+                        ft.Container(
+                            padding=20,
+                            expand=1,
+                            content=ft.Column(
+                                spacing=10,
+                                controls=[
+                                    ft.Text(f"{len(settings["columns"])} Fields Selected (Max 8 will be applied)", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY, no_wrap=False)
+                                ]+[
+                                    ft.Row(
                                         controls=[
-                                            ft.Text("2 Active Filters", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY, expand=1, no_wrap=False)
-                                        ]+[
-                                            ft.Container(
-                                                expand=1,
-                                                content=ft.Row(
-                                                    controls=[
-                                                        ft.Text(field[1], size=16, width=200, expand=3),
-                                                        ft.Row(
-                                                            alignment=ft.MainAxisAlignment.END,
-                                                            expand=5,
-                                                            spacing=0,
-                                                            controls=[ft.Checkbox(label=short) for long,short in field[3]]
-                                                        ) if field[2]=="enum" else
-                                                        ft.RangeSlider(start_value=0,end_value=10,min=0,max=10,label="{value}",expand=5) if field[2]=="number" else
-                                                        ft.Button(
-                                                            icon=ft.Icons.DATE_RANGE,
-                                                            content="Pick Date Range",
-                                                            on_click=lambda _: page.show_dialog(ft.DateRangePicker()),
-                                                            expand=5
-                                                        ) if field[2]=="date" else
-                                                        ft.TextField(label=f"{field[1]}",expand=5)
-                                                    ]
-                                                )
-                                            ) for field in columns[route]
+                                            ft.Checkbox(value=(num in settings["columns"]), on_change=lambda e,n=num: column_button(e,n), expand=1),
+                                            ft.Text(field[1], size=16, width=200, expand=7),
                                         ]
-                                    )
-                                ),
-                                ft.Container(
-                                    padding=20,
-                                    expand=1,
-                                    content=ft.Column(
-                                        spacing=10,
-                                        controls=[
-                                            ft.Text(f"{len(settings["columns"])} Fields Selected", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY, no_wrap=False)
-                                        ]+[
-                                            ft.Row(
-                                                controls=[
-                                                    ft.Checkbox(value=(num in settings["columns"]), on_change=lambda e,n=num: column_button(e,n), expand=1),
-                                                    ft.Text(field[1], size=16, width=200, expand=7),
-                                                ]
-                                            ) for num,field in enumerate(columns[route])
-                                        ]
-                                    )
-                                )
-                            ]
+                                    ) for num,field in enumerate(columns.columns[route])
+                                ]
+                            )
                         )
-                    )
-                ]
+                    ]
+                )
             )
         ]
     )
@@ -272,17 +175,23 @@ def create_buttons(page:ft.Page, route:str, settings:dict, update_func):
             settings["page"] = new
             update_func()
     def reset_settings():
-        settings["sort"] = columns[route][0][0]
+        settings["sort"] = columns.columns[route][0][0]
         settings["sort_dir"] = True
         settings["filters"] = {}
         settings["columns"] = [0,1,2,3,4,5]
+        settings["page"] = 1
+        update_func()
+    def apply_settings():
+        if len(settings["columns"])>8:
+            settings["columns"].sort()
+            settings["columns"] = settings["columns"][:8]
         settings["page"] = 1
         update_func()
     cont = ft.Row(
         expand=True,
         controls=[
             ft.Text(
-                expand=12,
+                expand=8,
                 value=f"Showing {settings["page"]*50-49}-{min(settings["page"]*50,settings["num_records"])} of {settings["num_records"]} record(s)",
                 size=16,
                 weight=ft.FontWeight.BOLD,
@@ -324,8 +233,21 @@ def create_buttons(page:ft.Page, route:str, settings:dict, update_func):
             ),
             ft.Button(
                 expand=4,
+                on_click=lambda _: apply_settings(),
+                content=ft.Text("Apply Filter/Columns",size=16,weight=ft.FontWeight.BOLD),
+                icon=ft.Icon(ft.Icons.CHANGE_CIRCLE,size=20),
+                style = ft.ButtonStyle(
+                    bgcolor=ft.Colors.SURFACE_CONTAINER,
+                    color=ft.Colors.PRIMARY,
+                    padding=ft.Padding(0,20,0,20),
+                    shape=ft.RoundedRectangleBorder(radius=10),
+                )
+            ),
+            ft.Button(
+                expand=4,
                 content=ft.Text(f"Add {names[route]}",size=16,weight=ft.FontWeight.BOLD),
                 icon=ft.Icon(ft.Icons.ADD,size=20),
+                on_click=lambda _: page.run_task(page.push_route,f"/{route}/add"),
                 style = ft.ButtonStyle(
                     bgcolor=ft.Colors.PRIMARY,
                     color=ft.Colors.ON_PRIMARY,
@@ -347,14 +269,14 @@ def create_table(page:ft.Page, route:str, settings:dict, update_func):
         sort_attr=settings["sort"],
         sort_dir=settings["sort_dir"],
         filters=settings["filters"],
-        columns=settings["columns"],
+        columns=[0]+settings["columns"],
         limit=50,
         offset=50*(settings["page"]-1)
     )
     settings["num_records"] = queries.table_size(
         conn=conn,
         table=names[route],
-        column=columns[route][0][0],
+        column=columns.columns[route][0][0],
         filters=settings["filters"]
     )
     cont = ft.Column(
@@ -366,7 +288,7 @@ def create_table(page:ft.Page, route:str, settings:dict, update_func):
                     controls=[
                         ft.Text(expand=2)
                     ] + [
-                        ft.Text(str(columns[route][i][0]),weight=ft.FontWeight.BOLD,text_align=ft.TextAlign.CENTER,expand=10)
+                        ft.Text(str(columns.columns[route][i][1]),weight=ft.FontWeight.BOLD,text_align=ft.TextAlign.CENTER,expand=10)
                         for i in settings["columns"]
                     ]
                 )
@@ -375,7 +297,7 @@ def create_table(page:ft.Page, route:str, settings:dict, update_func):
             ft.Container(
                 bgcolor=ft.Colors.SURFACE_CONTAINER,
                 ink=True,
-                on_click=lambda _:0,
+                on_click=lambda _,id=data[0]: page.run_task(page.push_route,f"/{route}/{id}"),
                 border_radius=20,
                 padding=10,
                 content=ft.Row(
@@ -383,7 +305,7 @@ def create_table(page:ft.Page, route:str, settings:dict, update_func):
                         ft.Icon(icon=icons[route],color=ft.Colors.PRIMARY,expand=2)
                     ] + [
                         ft.Text(str(attr),text_align=ft.TextAlign.CENTER,expand=10)
-                        for attr in data
+                        for attr in (data[1:] if 0 not in settings["columns"] else data)
                     ]
                 )
             ) for data in records
@@ -395,14 +317,22 @@ def create_table(page:ft.Page, route:str, settings:dict, update_func):
 
 
 def build_page(page:ft.Page, route:str):
+    conn = sqlite3.connect(DATABASE)
     table_settings = {
-        "sort": columns[route][0][0],
+        "sort": columns.columns[route][0][0],
         "sort_dir": True,
         "filters": {},
         "columns": [0,1,2,3,4,5],
         "page": 1,
         "num_records": 0
     }
+    table_settings["num_records"] = queries.table_size(
+            conn=conn,
+            table=names[route],
+            column=columns.columns[route][0][0],
+            filters=table_settings["filters"]
+        )
+    conn.close()
     page_container = ft.Container()
     def page_content():
         return ft.Column(
