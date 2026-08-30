@@ -1184,6 +1184,52 @@ select_sql_statement = {
         LEFT JOIN Requalification ON QualificationAward.AwardID = Requalification.AwardID
         GROUP BY Requalification.AwardID
     ) as q ON QualificationAward.AwardID = q.AwardID
+    """,
+    "Race":"""
+    SELECT
+        Race.RaceID,
+        Race.CompetitionID,
+        c.Name AS CompetitionName,
+        Race.EventID,
+        e.Name AS EventName,
+        Race.AgeGroup,
+        Race.Gender,
+        COALESCE(r.Results,0) AS Results,
+        COALESCE(r.Competitors,0) AS Competitors
+    FROM Race
+    LEFT JOIN Competition AS c ON Race.CompetitionID = c.CompetitionID
+    LEFT JOIN Event AS e ON Race.EventID = e.EventID
+    LEFT JOIN (
+        SELECT
+            Result.RaceID,
+            COUNT(Result.ResultID) AS Results,
+            COUNT(DISTINCT Athlete_Result.AthleteID) AS Competitors
+        FROM Result
+        LEFT JOIN Athlete_Result ON Result.ResultID = Athlete_Result.ResultID
+        GROUP BY Result.RaceID
+    ) AS r ON Race.RaceID = r.RaceID
+    """,
+    "Result":"""
+    SELECT
+        Result.ResultID,
+        Result.RaceID,
+        c.Name AS CompetitionName,
+        e.Name AS EventName,
+        Race.AgeGroup,
+        Race.Gender,
+        Result.Ranking,
+        COALESCE(a.Athletes,0) AS Athletes
+    FROM Result
+    LEFT JOIN Race ON Result.RaceID = Race.RaceID
+    LEFT JOIN Competition AS c ON Race.CompetitionID = c.CompetitionID
+    LEFT JOIN Event AS e ON Race.EventID = e.EventID
+    LEFT JOIN (
+        SELECT
+            Athlete_Result.ResultID,
+            COUNT(Athlete_Result.AthleteID) AS Athletes
+        FROM Athlete_Result
+        GROUP BY Athlete_Result.ResultID
+    ) AS a ON Result.ResultID = a.ResultID
     """
 }
 
@@ -1254,6 +1300,21 @@ def get_relations(conn:sqlite3.Connection,
     """,
     (parent_id,))
     return cursor.fetchall()
+
+def add_relation(conn:sqlite3.Connection,
+                 table:str,
+                 fields:list[str],
+                 values:list):
+    cursor = conn.cursor()
+    cursor.execute(f"""
+    INSERT INTO
+        {table}({",".join(fields)})
+    VALUES
+        ({",".join(["?" for v in values])})
+    
+    """,
+    values)
+    conn.commit()
 
 def update_relation(conn:sqlite3.Connection,
                     table:str,

@@ -4,8 +4,14 @@ themes = {
     "home":ft.Theme(color_scheme_seed=ft.Colors.BLUE_GREY),
     "athletes":ft.Theme(color_scheme_seed=ft.Colors.YELLOW),
     "competitions":ft.Theme(color_scheme_seed=ft.Colors.BLUE),
+    "events":ft.Theme(color_scheme_seed=ft.Colors.BLUE),
+    "races":ft.Theme(color_scheme_seed=ft.Colors.BLUE),
+    "results":ft.Theme(color_scheme_seed=ft.Colors.BLUE),
+    "patrolgroups":ft.Theme(color_scheme_seed=ft.Colors.RED),
     "patrols":ft.Theme(color_scheme_seed=ft.Colors.RED),
     "volunteering":ft.Theme(color_scheme_seed=ft.Colors.PURPLE),
+    "supervisors":ft.Theme(color_scheme_seed=ft.Colors.PURPLE),
+    "qualifications":ft.Theme(color_scheme_seed=ft.Colors.PURPLE),
     "grants":ft.Theme(color_scheme_seed=ft.Colors.LIGHT_GREEN),
 }
 
@@ -73,7 +79,7 @@ def create_sidemenu(page:ft.Page, route:str):
         if event.control.selected_index is not None:
             await page.push_route(f"/{links[event.control.selected_index]}")
     navigation_rail = ft.NavigationRail(
-        selected_index=list(pages).index(route),
+        selected_index=list(pages).index(route) if route in pages else None,
         width=100,
         on_change=handle_change,
         destinations=[

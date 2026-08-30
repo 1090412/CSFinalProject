@@ -57,15 +57,15 @@ summary_card = {
     "home":[
         "... Overview",
         [
-            (True,"Total Athletes",57),
-            (False,"Male",29),
-            (False,"Female",28),
+            (True,"Total Athletes",...),
+            (False,"Male",...),
+            (False,"Female",...),
         ],[
-            (True,"Average Age",24),
-            (False,"Youth (13-15)",18),
-            (False,"U23 (16-22)",14),
-            (False,"Open (23-59)",17),
-            (False,"Masters (60+)",9),
+            (True,"Average Age",0),
+            (False,"Youth (13-15)",0),
+            (False,"U23 (16-22)",0),
+            (False,"Open (23-59)",0),
+            (False,"Masters (60+)",0),
         ]
     ],
     "athletes":[
@@ -126,10 +126,10 @@ def create_summary(page:ft.Page, route:str):
 
 minitables = {
     "home":[
-        ("Athlete", "/athletes", ft.Icons.PERSON, ("Name","Age","Gender"), (("Perosn 1",23,"M"),("Perosn 2",19,"F"),("Perosn 3",32,"F")), 10)
+        
     ],
     "athletes":[
-
+        ("Athlete", "/athletes", ft.Icons.PERSON, ("Name","Age","Gender"), (("Perosn 1",23,"M"),("Perosn 2",19,"F"),("Perosn 3",32,"F")), 10)
     ],
     "competitions":[
 

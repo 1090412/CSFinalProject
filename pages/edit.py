@@ -8,13 +8,29 @@ DATABASE = "database/database.db"
 
 names = {
     "athletes":"Athlete",
+    "supervisors":"Supervisor",
     "competitions":"Competition",
     "events":"Event",
+    "races":"Race",
+    "results":"Result",
+    "patrolgroups":"PatrolGroup",
     "patrols":"Patrol",
     "volunteering":"VolunteerActivity",
-    "qualifications":"Qualification",
+    "qualifications":"QualificationAward",
 }
 
+sql_functions = {
+    "athletes":(queries.add_athlete,queries.edit_athlete),
+    "supervisors":(queries.add_supervisor,queries.edit_supervisor),
+    "competitions":(queries.add_competition,queries.edit_competition),
+    "events":(queries.add_event,queries.edit_event),
+    "races":(queries.add_race,queries.edit_race),
+    "results":(queries.add_result,queries.edit_result),
+    "patrolgroups":(queries.add_patrolgroup,queries.edit_patrolgroup),
+    "patrols":(queries.add_patrol,queries.edit_patrol),
+    "volunteering":(queries.add_volunteeractivity,queries.edit_volunteeractivity),
+    "qualifications":(queries.add_qualificationaward,queries.edit_qualificationaward),
+}
 
 
 def top_content(page:ft.Page, route:str, editables):
@@ -56,12 +72,12 @@ def top_content(page:ft.Page, route:str, editables):
             values = [i[2] for i in editables]
             if values[0]>0:
                 values = [conn] + values
-                queries.edit_athlete(*values)
+                sql_functions[route][1](*values)
                 page.update()
                 page.run_task(page.push_route,f"/{route}/{values[1]}")
             else:
                 values = [conn] + values[1:]
-                queries.add_athlete(*values)
+                sql_functions[route][0](*values)
                 page.run_task(page.push_route,f"/{route}/view")
         except sqlite3.IntegrityError as e:
             error_popup()
@@ -207,13 +223,18 @@ def relational_content(page:ft.Page, route:str, link, info, id):
         fields=[info[1][4]]+[i[0] for i in info[3]]
     )
     records = [list(record) for record in records]
+    new_record = [None for i in range(len(info[3])+1)]
     def create_date_picker(rec,index):
         def date_change(event,r,i):
-            records[r][i+1] = event.control.value.strftime("%Y-%m-%d")
+            if r>-1:
+                records[r][i+1] = event.control.value.strftime("%Y-%m-%d")
+            else:
+                new_record[i] = event.control.value.strftime("%Y-%m-%d")
             button.content = date_picker.value.strftime("%Y-%m-%d")
             button.update()
+        value = records[rec][index+1] if rec>-1 else new_record[index]
         date_picker = ft.DatePicker(
-            value=datetime.datetime.strptime(records[rec][index+1],"%Y-%m-%d") if records[rec][index+1] else datetime.datetime.now(),
+            value=datetime.datetime.strptime(value,"%Y-%m-%d") if value else datetime.datetime.now(),
             on_change=lambda e: date_change(e,rec,index)
         )
         button = ft.Button(
@@ -225,7 +246,11 @@ def relational_content(page:ft.Page, route:str, link, info, id):
         return button
     def on_change(event,rec,index):
         value = event.control.value
-        field = info[3][index]
+        if rec>-1:
+            field = info[3][index]
+        else:
+            if index>0: field = info[3][index-1]
+            else: field = (info[1][4],"id")
         if field[1]=="id" and value not in [None,"",0]:
             value = int(value)
         if field[1]=="enum":
@@ -233,8 +258,11 @@ def relational_content(page:ft.Page, route:str, link, info, id):
                 if str(val) == str(value):
                     value = val
                     break
-        records[rec][index+1] = value
-        apply_changes()
+        if rec>-1:
+            records[rec][index+1] = value
+            apply_changes()
+        else:
+            new_record[index] = value
     def apply_changes():
         conn = sqlite3.connect(DATABASE)
         for record in records:
@@ -262,6 +290,31 @@ def relational_content(page:ft.Page, route:str, link, info, id):
         records.pop(rec)
         refresh_rows()
         conn.close()
+    def add_record():
+        nonlocal new_record
+        conn = sqlite3.connect(DATABASE)
+        try:
+            queries.add_relation(
+                conn=conn,
+                table=info[1][2],
+                fields=[info[1][3],info[1][4]]+[i[0] for i in info[3]],
+                values=[id]+new_record
+            )
+        except sqlite3.IntegrityError as e:
+            page.show_dialog(
+                ft.AlertDialog(
+                    title=ft.Text("Invalid Data"),
+                    content=ft.Column(
+                        controls=[ft.Text(f"""Data is empty/incorrectly formatted.\nThe relation may already exist.""")],
+                        tight=True,
+                    ),
+                    actions=[ft.Button("OK",on_click=lambda _: page.pop_dialog())],
+                )
+            )
+        else:
+            new_record = [None for i in range(len(info[3])+1)]
+            refresh_rows()
+        conn.close()
     rows = ft.Column(
         spacing=10,
         expand=True,
@@ -269,6 +322,14 @@ def relational_content(page:ft.Page, route:str, link, info, id):
     )
     def refresh_rows():
         conn = sqlite3.connect(DATABASE)
+        records = queries.get_relations(
+            conn=conn,
+            table=info[1][2],
+            pk_field=info[1][3],
+            parent_id=id,
+            fields=[info[1][4]]+[i[0] for i in info[3]]
+        )
+        records = [list(record) for record in records]
         rows.controls = [
             ft.Row(
                 expand=True,
@@ -324,8 +385,7 @@ def relational_content(page:ft.Page, route:str, link, info, id):
                                 text=columns.names[field[2][1]](values),
                             ) for values in queries.view_table(conn,field[2][0],columns.columns[field[2][1]][0][0],True,{},list(range(len(columns.columns[field[2][1]]))))
                         ]
-                    )
-                    for i,field in enumerate(info[3])
+                    ) for i,field in enumerate(info[3])
                 ] + [
                     ft.IconButton(
                         expand=1,
@@ -343,20 +403,131 @@ def relational_content(page:ft.Page, route:str, link, info, id):
         expand=True,
         spacing=10,
         controls=[
-            ft.Divider(height=5),
+            ft.Divider(height=15),
             ft.Text(
                 value=info[0],
                 size=20,
                 weight=ft.FontWeight.BOLD,
             ),
             rows,
-            ft.TextButton(
-                content=f"Add {info[1][1]} Relation",
-                icon=ft.Icons.ADD
+            ft.Row(
+                expand=True,
+                controls=[
+                    ft.Text(expand=1),
+                    ft.Dropdown(
+                        expand=8,
+                        on_select=lambda e,r=-1,i=0: on_change(e,r,i),
+                        label=f"Add {info[1][1]} Relation",
+                        editable=True,
+                        menu_height=300,
+                        options=[
+                            ft.DropdownOption(
+                                key=values[0],
+                                text=columns.names[link](values),
+                            ) for values in queries.view_table(conn,info[1][1],columns.columns[link][0][0],True,{},list(range(len(columns.columns[link]))))
+                        ]
+                    )
+                ] + [
+                    ft.Dropdown(
+                        expand=int(12/len(info[3])),
+                        label=field[0],
+                        on_select=lambda e,r=-1,i=i+1: on_change(e,r,i),
+                        options=[
+                            ft.DropdownOption(
+                                key=long,
+                                text=short if isinstance(long,int) else long,
+                            ) for long,short in field[2]
+                        ]
+                    ) if field[1]=="enum" else
+                    ft.Slider(
+                        expand=int(12/len(info[3])),
+                        on_change=lambda e,r=-1,i=i+1: on_change(e,r,i),
+                        label="{value} hours",
+                        min=field[2][0],
+                        max=field[2][1],
+                        divisions=8
+                    ) if field[1]=="number" else
+                    create_date_picker(-1,i+1) if field[1]=="date" else
+                    ft.TextField(
+                        expand=int(12/len(info[3])),
+                        label=field[0],
+                        on_change=lambda e,r=-1,i=i+1: on_change(e,r,i)
+                    ) if field[1]=="text" else
+                    ft.Dropdown(
+                        expand=int(12/len(info[3])),
+                        on_select=lambda e,r=-1,i=i+1: on_change(e,r,i),
+                        label=field[0],
+                        editable=True,
+                        menu_height=300,
+                        options=[
+                            ft.DropdownOption(
+                                key=values[0],
+                                text=columns.names[field[2][1]](values),
+                            ) for values in queries.view_table(conn,field[2][0],columns.columns[field[2][1]][0][0],True,{},list(range(len(columns.columns[field[2][1]]))))
+                        ]
+                    )
+                    for i,field in enumerate(info[3])
+                ] + [
+                    ft.IconButton(
+                        expand=1,
+                        icon=ft.Icons.ADD,
+                        icon_color=ft.Colors.PRIMARY,
+                        bgcolor=ft.Colors.PRIMARY_CONTAINER,
+                        on_click=lambda _: add_record()
+                    )
+                ]
             )
         ]
     )
     conn.close()
+    return cont
+
+
+
+def child_content(page:ft.Page, route:str, link, info, id):
+    conn = sqlite3.connect(DATABASE)
+    cont = ft.Column(
+        expand=True,
+        spacing=10,
+        controls=[
+            ft.Divider(height=15),
+            ft.Text(
+                value=info[0],
+                size=20,
+                weight=ft.FontWeight.BOLD,
+            )
+        ] + [
+            ft.Row(
+                expand=True,
+                controls=[
+                    ft.Text(expand=1),
+                    ft.Text(
+                        columns.names[link](values),
+                        size=16,
+                        weight=ft.FontWeight.BOLD,
+                        expand=8
+                    ),
+                    ft.IconButton(
+                        expand=1,
+                        icon=ft.Icons.INFO,
+                        icon_color=ft.Colors.PRIMARY,
+                        bgcolor=ft.Colors.PRIMARY_CONTAINER,
+                        on_click=lambda _: page.run_task(page.push_route, f"/{link}/{values[0]}")
+                    ),
+                    ft.Text(expand=12)
+                ]
+            ) for values in queries.view_table(
+                conn,
+                info[1][1],
+                f"{info[1][1]}.{info[1][4]}",
+                True,
+                {
+                    f"{info[1][1]}.{info[1][3]}":id
+                },
+                list(range(len(columns.columns[link])))
+            )
+        ]
+    )
     return cont
 
 
@@ -387,7 +558,11 @@ def build_page(page:ft.Page, route:str, id:int):
         ] for i,n in enumerate(editable_cols)
     ]
     if id>0:
-        relations = [relational_content(page,route,link,info,id) for link,info in columns.relations[route].items()]
+        relations = [
+            relational_content(page,route,link,info,id) if info[2] else
+            child_content(page,route,link,info,id)
+            for link,info in columns.relations[route].items()
+        ]
     else:
         relations = []
     cont = ft.Column(

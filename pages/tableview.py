@@ -7,21 +7,28 @@ DATABASE = "database/database.db"
 
 names = {
     "athletes":"Athlete",
+    "supervisors":"Supervisor",
     "competitions":"Competition",
     "events":"Event",
+    "races":"Race",
+    "results":"Result",
+    "patrolgroups":"PatrolGroup",
     "patrols":"Patrol",
     "volunteering":"VolunteerActivity",
-    "qualifications":"Qualification",
+    "qualifications":"QualificationAward",
 }
 
 icons = {
     "athletes":ft.Icons.PERSON,
-    "competitions":ft.Icons.PERSON,
-    "events":ft.Icons.PERSON,
-    "patrolgroups":ft.Icons.PERSON,
-    "patrols":ft.Icons.PERSON,
-    "volunteering":ft.Icons.PERSON,
-    "qualifications":ft.Icons.PERSON,
+    "supervisors":ft.Icons.SUPERVISOR_ACCOUNT,
+    "competitions":ft.Icons.EMOJI_EVENTS,
+    "events":ft.Icons.FLAG,
+    "races":ft.Icons.DIRECTIONS_RUN,
+    "results":ft.Icons.EMOJI_EVENTS,
+    "patrolgroups":ft.Icons.GROUPS,
+    "patrols":ft.Icons.SAFETY_DIVIDER,
+    "volunteering":ft.Icons.VOLUNTEER_ACTIVISM,
+    "qualifications":ft.Icons.CARD_MEMBERSHIP,
 }
 
 
