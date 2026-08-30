@@ -1168,22 +1168,22 @@ select_sql_statement = {
         Event.Importance
     FROM Event
     """,
-    "Qualification":"""
+    "QualificationAward":"""
     SELECT
-        Qualification.QualificationID,
-        Qualification.Name,
+        QualificationAward.AwardID,
+        QualificationAward.Name,
         COALESCE(q.Requals,0) AS Requals,
         COALESCE(q.Athletes,0) AS Athletes
-    FROM Qualification
+    FROM QualificationAward
     LEFT JOIN (
         SELECT
-            Requalification.QualificationID,
+            Requalification.AwardID,
             COUNT(Requalification.AthleteID) AS Requals,
             COUNT(DISTINCT Requalification.AthleteID) AS Athletes
-        FROM Qualification
-        LEFT JOIN Requalification ON Qualification.QualificationID = Requalification.QualificationID
-        GROUP BY Requalification.QualificationID
-    ) as q ON Qualification.QualificationID = q.QualificationID
+        FROM QualificationAward
+        LEFT JOIN Requalification ON QualificationAward.AwardID = Requalification.AwardID
+        GROUP BY Requalification.AwardID
+    ) as q ON QualificationAward.AwardID = q.AwardID
     """
 }
 
@@ -1240,34 +1240,51 @@ def view_table(conn:sqlite3.Connection,
 
 
 
-def table_size(conn:sqlite3.Connection,
-               table:str,
-               column:str,
-               filters:dict):
+def get_relations(conn:sqlite3.Connection,
+                  table:str,
+                  pk_field:str,
+                  parent_id:int,
+                  fields:list[str]):
     cursor = conn.cursor()
-    values = []
-    filter_queries = []
-    for attribute,restriction in filters.items():
-        query = None
-        if isinstance(restriction,str):
-            query = f"{attribute} LIKE ?"
-            values.append(f"%{restriction}%")
-        if isinstance(restriction,tuple) and len(restriction)==2:
-            query = f"{attribute} BETWEEN ? AND ?"
-            values.extend(restriction)
-        if isinstance(restriction,list):
-            query = f"{attribute} IN ({",".join("?" for _ in restriction)})"
-            values.extend(restriction)
-        if query:
-            filter_queries.append(query)
-    if len(filter_queries)>0:
-        filter_query = "WHERE " + " AND ".join(filter_queries)
-    else:
-        filter_query = ""
     cursor.execute(f"""
-    SELECT COUNT({column}) FROM {table} {filter_query}
-    """)
-    return cursor.fetchone()[0]
+    SELECT
+        {", ".join(fields)}
+    FROM {table}
+    WHERE {pk_field} = ?
+    """,
+    (parent_id,))
+    return cursor.fetchall()
+
+def update_relation(conn:sqlite3.Connection,
+                    table:str,
+                    pk1_field:str,
+                    pk1_id:int,
+                    pk2_field:str,
+                    pk2_id:int,
+                    fields:list[str],
+                    values:list):
+    cursor = conn.cursor()
+    cursor.execute(f"""
+    UPDATE {table}
+    SET {", ".join([f"{field}=?" for field in fields])}
+    WHERE {pk1_field} = ? AND {pk2_field} = ?
+    """,
+    (*values,pk1_id,pk2_id))
+    conn.commit()
+
+def delete_relation(conn:sqlite3.Connection,
+                    table:str,
+                    pk1_field:str,
+                    pk1_id:int,
+                    pk2_field:str,
+                    pk2_id:int):
+    cursor = conn.cursor()
+    cursor.execute(f"""
+    DELETE FROM {table}
+    WHERE {pk1_field} = ? AND {pk2_field} = ?
+    """,
+    (pk1_id,pk2_id))
+    conn.commit()
 
 
 

@@ -24,6 +24,18 @@ columns = {
         ("CompetitionPoints", "Competition Points", "number", (0,1000,1)),
         ("TotalPoints", "Total Points", "number", (0,3000,1))
     ],
+    "supervisors": [
+        ("Supervisor.SupervisorID", "Supervisor ID", "id"),
+        ("Name", "Name", "text"),
+        ("Supervisor.FirstName", "First Name", "text"),
+        ("Supervisor.LastName", "Last Name", "text"),
+        ("Supervisor.Phone", "Phone", "text"),
+        ("Supervisor.Email", "Email", "text"),
+        ("PatrolGroups", "Patrol Groups", "number", (0,50,1)),
+        ("PatrolsSupervised", "Patrols Supervised", "number", (0,100,1)),
+        ("VolunteersSupervised", "Volunteers Supervised", "number", (0,100,1)),
+        ("Requalifications", "Requalifications", "number", (0,100,1))
+    ],
     "competitions": [
         ("Competition.CompetitionID", "Competition ID", "id"),
         ("Competition.Name", "Name", "text"),
@@ -81,8 +93,8 @@ columns = {
         ("TotalHoursEarned", "Total Hours Earned", "number", (0,500,1))
     ],
     "qualifications": [
-        ("Qualification.QualificationID", "Qualification ID", "id"),
-        ("Qualification.Name", "Name", "text"),
+        ("QualificationAward.AwardID", "Award ID", "id"),
+        ("QualificationAward.Name", "Name", "text"),
         ("Requals", "Requalifications", "number", (0,50,1)),
         ("Athletes", "Athletes", "number", (0,100,1))
     ]
@@ -90,10 +102,41 @@ columns = {
 
 names = {
     "athletes": lambda cols: f"Athlete #{cols[0]} - {cols[1]}",
+    "supervisors": lambda cols: f"Supervisor #{cols[0]} - {cols[1]}",
     "competitions": lambda cols: f"Competition #{cols[0]} - {cols[2]} {cols[1]}",
     "events": lambda cols: f"Event #{cols[0]} - {cols[1]} ({cols[2]})",
     "patrolgroups": lambda cols: f"Patrol Group #{cols[0]} - {cols[1]}",
-    "patrols": lambda cols: f"Patrol #{cols[0]} - {cols[2]} {cols[5]} {cols[6]}",
+    "patrols": lambda cols: f"Patrol #{cols[0]} - {cols[2]} {cols[5]} {cols[4]}",
     "volunteering": lambda cols: f"Volunteer Activity #{cols[0]} - {cols[1]} {cols[5]}",
     "qualifications": lambda cols: f"Qualification #{cols[0]} - {cols[1]}",
+}
+
+relations = {
+    "athletes":{
+        "patrols":[
+            "Patrols",
+            ("Athlete", "Patrol", "Athlete_Patrol", "AthleteID", "PatrolID"),
+            True,
+            [
+                ("Hours", "number", (0,8,1))
+            ]
+        ],
+        "volunteering":[
+            "Volunteering",
+            ("Athlete", "VolunteerActivity", "Athlete_Volunteer", "AthleteID", "ActivityID"),
+            True,
+            [
+                ("Hours", "number", (0,8,1))
+            ]
+        ],
+        "qualifications":[
+            "Requalifications",
+            ("Athlete", "QualificationAward", "Requalification", "AthleteID", "AwardID"),
+            True,
+            [
+                ("SupervisorID", "id", ("Supervisor", "supervisors")),
+                ("Date", "date"),
+            ]
+        ]
+    }
 }

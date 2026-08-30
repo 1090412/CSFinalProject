@@ -32,13 +32,45 @@ def create_filters(page:ft.Page, route:str, settings:dict, update_func):
         settings["sort_dir"] = dir
         settings["page"] = 1
         update_func()
-    def filter_button(field):
-        ...
+    def filter_change(event,field,key,type):
+        if type=="enum":
+            if event.control.value and key not in settings["filters"][field]:
+                settings["filters"][field].append(key)
+            if not event.control.value and key in settings["filters"][field]:
+                settings["filters"][field].remove(key)
+        if type=="number":
+            settings["filters"][field] = (event.control.start_value,event.control.end_value)
+        if type=="text":
+            settings["filters"][field] = event.control.value
+        if type=="id":
+            if event.control.value!="":
+                try:
+                    settings["filters"][field] = int(event.control.value)
+                except:
+                    settings["filters"][field] = None
+            else:
+                settings["filters"][field] = None
     def column_button(event,field_no):
         if event.control.value and field_no not in settings["columns"]:
             settings["columns"].append(field_no)
         if not event.control.value and field_no in settings["columns"]:
             settings["columns"].remove(field_no)
+    def date_filter(field):
+        def date_change(event):
+            if event.control.start_value and event.control.end_value:
+                settings["filters"][field] = (
+                    event.control.start_value.strftime("%Y-%m-%d"),
+                    event.control.end_value.strftime("%Y-%m-%d")
+                )
+        picker = ft.DateRangePicker(
+            on_change=date_change
+        )
+        return ft.Button(
+            icon=ft.Icons.DATE_RANGE,
+            content="Pick Date Range",
+            on_click=lambda _: page.show_dialog(picker),
+            expand=5
+        )
     cont = ft.ExpansionPanelList(
         expand=True,
         elevation=0,
@@ -114,7 +146,7 @@ def create_filters(page:ft.Page, route:str, settings:dict, update_func):
                             content=ft.Column(
                                 spacing=10,
                                 controls=[
-                                    ft.Text("2 Active Filters", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY, expand=1, no_wrap=False)
+                                    ft.Text("Filters", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.PRIMARY, expand=1, no_wrap=False)
                                 ]+[
                                     ft.Container(
                                         expand=1,
@@ -125,16 +157,31 @@ def create_filters(page:ft.Page, route:str, settings:dict, update_func):
                                                     alignment=ft.MainAxisAlignment.END,
                                                     expand=5,
                                                     spacing=0,
-                                                    controls=[ft.Checkbox(label=short) for long,short in field[3]]
+                                                    controls=[ft.Checkbox(label=short,on_change=lambda e,f=field[0],k=long,t="enum": filter_change(e,f,k,t),value=long in settings["filters"][field[0]]) for long,short in field[3]]
                                                 ) if field[2]=="enum" else
-                                                ft.RangeSlider(start_value=0,end_value=10,min=0,max=10,label="{value}",expand=5) if field[2]=="number" else
-                                                ft.Button(
-                                                    icon=ft.Icons.DATE_RANGE,
-                                                    content="Pick Date Range",
-                                                    on_click=lambda _: page.show_dialog(ft.DateRangePicker()),
+                                                ft.RangeSlider(
+                                                    start_value=settings["filters"][field[0]][0],
+                                                    end_value=settings["filters"][field[0]][1],
+                                                    min=field[3][0],
+                                                    max=field[3][1],
+                                                    divisions=(field[3][1]-field[3][0])//field[3][2],
+                                                    on_change=lambda e,f=field[0],k=None,t="number": filter_change(e,f,k,t),
+                                                    label="{value}",
                                                     expand=5
-                                                ) if field[2]=="date" else
-                                                ft.TextField(label=f"{field[1]}",expand=5)
+                                                ) if field[2]=="number" else
+                                                date_filter(field[0]) if field[2]=="date" else
+                                                ft.TextField(
+                                                    label=f"{field[1]}",
+                                                    value=settings["filters"][field[0]],
+                                                    on_change=lambda e,f=field[0],k=None,t="text": filter_change(e,f,k,t),
+                                                    expand=5
+                                                ) if field[2]=="text" else
+                                                ft.TextField(
+                                                    label=f"{field[1]}",
+                                                    value=settings["filters"][field[0]],
+                                                    on_change=lambda e,f=field[0],k=None,t="id": filter_change(e,f,k,t),
+                                                    expand=5
+                                                )
                                             ]
                                         )
                                     ) for field in columns.columns[route]
@@ -177,7 +224,14 @@ def create_buttons(page:ft.Page, route:str, settings:dict, update_func):
     def reset_settings():
         settings["sort"] = columns.columns[route][0][0]
         settings["sort_dir"] = True
-        settings["filters"] = {}
+        settings["filters"] = {
+            field[0]: [i[0] for i in field[3]] if field[2]=="enum" else
+                      (field[3][0],field[3][1]) if field[2]=="number" else
+                      ("1901-01-01","2050-01-01") if field[2]=="date" else
+                      "" if field[2]=="text" else
+                      None
+            for field in columns.columns[route]
+        }
         settings["columns"] = [0,1,2,3,4,5]
         settings["page"] = 1
         update_func()
@@ -273,11 +327,15 @@ def create_table(page:ft.Page, route:str, settings:dict, update_func):
         limit=50,
         offset=50*(settings["page"]-1)
     )
-    settings["num_records"] = queries.table_size(
-        conn=conn,
-        table=names[route],
-        column=columns.columns[route][0][0],
-        filters=settings["filters"]
+    settings["num_records"] = len(
+        queries.view_table(
+            conn=conn,
+            table=names[route],
+            sort_attr=settings["sort"],
+            sort_dir=settings["sort_dir"],
+            filters=settings["filters"],
+            columns=[0]
+        )
     )
     cont = ft.Column(
         spacing=5,
@@ -321,17 +379,28 @@ def build_page(page:ft.Page, route:str):
     table_settings = {
         "sort": columns.columns[route][0][0],
         "sort_dir": True,
-        "filters": {},
+        "filters": {
+            field[0]: [i[0] for i in field[3]] if field[2]=="enum" else
+                      (field[3][0],field[3][1]) if field[2]=="number" else
+                      ("1901-01-01","2050-01-01") if field[2]=="date" else
+                      "" if field[2]=="text" else
+                      None
+            for field in columns.columns[route]
+        },
         "columns": [0,1,2,3,4,5],
         "page": 1,
         "num_records": 0
     }
-    table_settings["num_records"] = queries.table_size(
+    table_settings["num_records"] = len(
+        queries.view_table(
             conn=conn,
             table=names[route],
-            column=columns.columns[route][0][0],
-            filters=table_settings["filters"]
+            sort_attr=table_settings["sort"],
+            sort_dir=table_settings["sort_dir"],
+            filters=table_settings["filters"],
+            columns=[0]
         )
+    )
     conn.close()
     page_container = ft.Container()
     def page_content():
