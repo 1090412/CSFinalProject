@@ -1215,8 +1215,8 @@ select_sql_statement = {
         Result.RaceID,
         c.Name AS CompetitionName,
         e.Name AS EventName,
-        Race.AgeGroup,
-        Race.Gender,
+        Race.AgeGroup AS RaceAgeGroup,
+        Race.Gender AS RaceGender,
         Result.Ranking,
         COALESCE(a.Athletes,0) AS Athletes
     FROM Result
@@ -1346,6 +1346,19 @@ def delete_relation(conn:sqlite3.Connection,
     """,
     (pk1_id,pk2_id))
     conn.commit()
+
+
+
+def view_aggregate(conn:sqlite3.Connection,
+                   table:str,
+                   key:str,
+                   func:str,
+                   distinct:bool=False):
+    cursor = conn.cursor()
+    cursor.execute(f"""
+    SELECT {func}({"DISTINCT" if distinct else ""} {key}) FROM {table}
+    """)
+    return cursor.fetchone()[0]
 
 
 

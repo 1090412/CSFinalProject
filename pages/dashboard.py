@@ -1,29 +1,50 @@
 import flet as ft
 import random
+import sqlite3
+import database.queries as queries
 
-information_cards = {
-    "home":[
-        (ft.Icons.PEOPLE, 0, "Registered Athletes"),
-        (ft.Icons.LOCK_CLOCK, 0, "Total Patrol Hours"),
-        (ft.Icons.FLAG, 0, "Completed Required Patrols"),
-        (ft.Icons.EMOJI_EVENTS, 0, "2026 State Medals"),
-    ],
-    "athletes":[
+DATABASE = "database/database.db"
 
-    ],
-    "competitions":[
-
-    ],
-    "patrols":[
-        
-    ],
-    "volunteering":[
-        
-    ],
-    "grants":[
-        
-    ],
-}
+def get_info_cards(route:str):
+    conn = sqlite3.connect(DATABASE)
+    information_cards = {
+        "home":[
+            (ft.Icons.PERSON, queries.view_aggregate(conn,"Athlete","AthleteID","COUNT",distinct=True), "Registered Athletes"),
+            (ft.Icons.SUPERVISOR_ACCOUNT, queries.view_aggregate(conn,"Supervisor","SupervisorID","COUNT",distinct=True), "Registered Supervisors"),
+            (ft.Icons.SAFETY_DIVIDER, queries.view_aggregate(conn,"Patrol","PatrolID","COUNT",distinct=True), "Completed Patrols"),
+            (ft.Icons.LOCK_CLOCK, queries.view_aggregate(conn,"Athlete_Patrol","Hours","SUM")+queries.view_aggregate(conn,"Athlete_Volunteer","Hours","SUM"), "Total Hours"),
+        ],
+        "athletes":[
+            (ft.Icons.PERSON, queries.view_aggregate(conn,"Athlete","AthleteID","COUNT",distinct=True), "Registered Athletes"),
+            (ft.Icons.SAFETY_DIVIDER, queries.view_aggregate(conn,"Athlete_Patrol","AthleteID","COUNT",distinct=True), "Patroling Athletes"),
+            (ft.Icons.VOLUNTEER_ACTIVISM, queries.view_aggregate(conn,"Athlete_Volunteer","AthleteID","COUNT",distinct=True), "Volunteering Athletes"),
+            (ft.Icons.EMOJI_EVENTS, queries.view_aggregate(conn,"Athlete_Result","AthleteID","COUNT",distinct=True), "Competing Athletes"),
+        ],
+        "competitions":[
+            (ft.Icons.EMOJI_EVENTS, queries.view_aggregate(conn,"Competition","CompetitionID","COUNT",distinct=True), "Competitions"),
+            (ft.Icons.DIRECTIONS_RUN, queries.view_aggregate(conn,"Result","ResultID","COUNT",distinct=True), "Results"),
+            (ft.Icons.PERSON, queries.view_aggregate(conn,"Athlete_Result","AthleteID","COUNT",distinct=True), "Competing Athletes"),
+        ],
+        "patrols":[
+            (ft.Icons.GROUPS, queries.view_aggregate(conn,"PatrolGroup","PatrolGroupID","COUNT",distinct=True), "Patrol Groups"),
+            (ft.Icons.SAFETY_DIVIDER, queries.view_aggregate(conn,"Patrol","PatrolID","COUNT",distinct=True), "Patrol Sessions"),
+            (ft.Icons.LOCK_CLOCK, queries.view_aggregate(conn,"Athlete_Patrol","Hours","SUM"), "Total Patrol Hours"),
+            (ft.Icons.LOCK_CLOCK_OUTLINED, round(queries.view_aggregate(conn,"Athlete_Patrol","Hours","AVG"),2), "Average Hours per Patrol"),
+        ],
+        "volunteering":[
+            (ft.Icons.VOLUNTEER_ACTIVISM, queries.view_aggregate(conn,"VolunteerActivity","ActivityID","COUNT",distinct=True), "Volunteer Sessions"),
+            (ft.Icons.LOCK_CLOCK, queries.view_aggregate(conn,"Athlete_Volunteer","Hours","SUM"), "Total Volunteer Hours"),
+            (ft.Icons.LOCK_CLOCK_OUTLINED, round(queries.view_aggregate(conn,"Athlete_Volunteer","Hours","AVG"),2), "Average Hours per Session"),
+            (ft.Icons.MONEY, "$"+str(round(queries.view_aggregate(conn,"VolunteerActivity","FundsRaised","SUM"))), "Money Raised"),
+        ],
+        "qualifications":[
+            (ft.Icons.CARD_MEMBERSHIP, queries.view_aggregate(conn,"QualificationAward","AwardID","COUNT",distinct=True), "Qualification Awards"),
+            (ft.Icons.REFRESH, queries.view_aggregate(conn,"Requalification","AthleteID","COUNT"), "Requalifications"),
+            (ft.Icons.PERSON, queries.view_aggregate(conn,"Requalification","AthleteID","COUNT",distinct=True), "Qualified Athletes"),
+        ],
+    }
+    conn.close()
+    return information_cards[route]
 
 def create_cards(page:ft.Page, route:str):
     cont = ft.Row(
@@ -46,7 +67,7 @@ def create_cards(page:ft.Page, route:str):
                         ft.Text(str(stat), text_align=ft.TextAlign.CENTER, size=14, no_wrap=False)
                     ]
                 )
-            ) for icon,number,stat in random.sample(information_cards[route],min(5,len(information_cards[route])))
+            ) for icon,number,stat in get_info_cards(route)
         ]
     )
     return cont
@@ -55,33 +76,22 @@ def create_cards(page:ft.Page, route:str):
 
 summary_card = {
     "home":[
-        "... Overview",
-        [
-            (True,"Total Athletes",...),
-            (False,"Male",...),
-            (False,"Female",...),
-        ],[
-            (True,"Average Age",0),
-            (False,"Youth (13-15)",0),
-            (False,"U23 (16-22)",0),
-            (False,"Open (23-59)",0),
-            (False,"Masters (60+)",0),
-        ]
+        "Database Overview"
     ],
     "athletes":[
-        "... Overview"
+        "Athlete Overview"
     ],
     "competitions":[
-        "... Overview"
+        "Competitions Overview"
     ],
     "patrols":[
-        "... Overview"
+        "Patrol Overview"
     ],
     "volunteering":[
-        "... Overview"
+        "Volunteering Overview"
     ],
-    "grants":[
-        "... Overview"
+    "qualifications":[
+        "Qualifications Overview"
     ],
 }
 
@@ -124,26 +134,234 @@ def create_summary(page:ft.Page, route:str):
 
 
 
-minitables = {
-    "home":[
-        
-    ],
-    "athletes":[
-        ("Athlete", "/athletes", ft.Icons.PERSON, ("Name","Age","Gender"), (("Perosn 1",23,"M"),("Perosn 2",19,"F"),("Perosn 3",32,"F")), 10)
-    ],
-    "competitions":[
-
-    ],
-    "patrols":[
-        
-    ],
-    "volunteering":[
-        
-    ],
-    "grants":[
-        
-    ],
-}
+def get_minitable(route:str):
+    conn = sqlite3.connect(DATABASE)
+    minitables = {
+        "home":[
+            (
+                "Athlete",
+                "/athletes",
+                ft.Icons.PERSON,
+                ("Name","Patrols","Total Hours","Competitions",),
+                queries.view_table(
+                    conn=conn,
+                    table="Athlete",
+                    sort_attr="TotalHours",
+                    sort_dir=False,
+                    filters={},
+                    columns=[1,11,15,16],
+                    limit=10
+                )
+            ),
+        ],
+        "athletes":[
+            (
+                "Athlete",
+                "/athletes",
+                ft.Icons.PERSON,
+                ("Name","Gender","DOB"),
+                queries.view_table(
+                    conn=conn,
+                    table="Athlete",
+                    sort_attr="Name",
+                    sort_dir=True,
+                    filters={},
+                    columns=[1,4,5],
+                    limit=10
+                )
+            ),
+            (
+                "Supervisors",
+                "/supervisors",
+                ft.Icons.SUPERVISOR_ACCOUNT,
+                ("Name","Phone","Email"),
+                queries.view_table(
+                    conn=conn,
+                    table="Supervisor",
+                    sort_attr="Name",
+                    sort_dir=True,
+                    filters={},
+                    columns=[1,4,5],
+                    limit=10
+                )
+            ),
+        ],
+        "competitions":[
+            (
+                "Competition",
+                "/competitions",
+                ft.Icons.EMOJI_EVENTS,
+                ("Name","Discipline","Date","Competitiors"),
+                queries.view_table(
+                    conn=conn,
+                    table="Competition",
+                    sort_attr="Competition.StartDate",
+                    sort_dir=False,
+                    filters={},
+                    columns=[1,3,5,9],
+                    limit=10
+                )
+            ),
+            (
+                "Event",
+                "/events",
+                ft.Icons.FLAG,
+                ("Name","Discipline","Team Event"),
+                queries.view_table(
+                    conn=conn,
+                    table="Event",
+                    sort_attr="Event.Name",
+                    sort_dir=True,
+                    filters={},
+                    columns=[1,2,3],
+                    limit=10
+                )
+            ),
+            (
+                "Race",
+                "/races",
+                ft.Icons.DIRECTIONS_RUN,
+                ("Competition","Event","Age Group","Gender"),
+                queries.view_table(
+                    conn=conn,
+                    table="Race",
+                    sort_attr="Race.RaceID",
+                    sort_dir=True,
+                    filters={},
+                    columns=[2,4,5,6],
+                    limit=10
+                )
+            ),
+            (
+                "Result",
+                "/results",
+                ft.Icons.EMOJI_EVENTS,
+                ("Competition","Event","Age Group","Gender","Ranking"),
+                queries.view_table(
+                    conn=conn,
+                    table="Result",
+                    sort_attr="Result.ResultID",
+                    sort_dir=True,
+                    filters={},
+                    columns=[2,3,4,5,6],
+                    limit=10
+                )
+            ),
+        ],
+        "patrols":[
+            (
+                "Athlete",
+                "/athletes",
+                ft.Icons.PERSON,
+                ("Name","Patrols","Patrol Hours","Patrol Pts"),
+                queries.view_table(
+                    conn=conn,
+                    table="Athlete",
+                    sort_attr="PatrolHours",
+                    sort_dir=False,
+                    filters={},
+                    columns=[1,11,12,19],
+                    limit=10
+                )
+            ),
+            (
+                "Patrol Group",
+                "/patrolgroups",
+                ft.Icons.GROUPS,
+                ("Name","Captain","Patrols","Avg. Attendance"),
+                queries.view_table(
+                    conn=conn,
+                    table="PatrolGroup",
+                    sort_attr="PatrolGroup.Name",
+                    sort_dir=True,
+                    filters={},
+                    columns=[1,3,4,5],
+                    limit=10
+                )
+            ),
+            (
+                "Patrol",
+                "/patrols",
+                ft.Icons.SAFETY_DIVIDER,
+                ("Patrol Group","Date","Session","Attendance"),
+                queries.view_table(
+                    conn=conn,
+                    table="Patrol",
+                    sort_attr="Patrol.Date",
+                    sort_dir=False,
+                    filters={},
+                    columns=[2,4,5,7],
+                    limit=10
+                )
+            ),
+        ],
+        "volunteering":[
+            (
+                "Athlete",
+                "/athletes",
+                ft.Icons.PERSON,
+                ("Name","Vol. Sessions","Vol. Hours","Volunteering Pts"),
+                queries.view_table(
+                    conn=conn,
+                    table="Athlete",
+                    sort_attr="VolunteerHours",
+                    sort_dir=False,
+                    filters={},
+                    columns=[1,13,14,20],
+                    limit=10
+                )
+            ),
+            (
+                "Volunteer Activity",
+                "/volunteering",
+                ft.Icons.SAFETY_DIVIDER,
+                ("Name","Date","Funds Raised","Attendance"),
+                queries.view_table(
+                    conn=conn,
+                    table="VolunteerActivity",
+                    sort_attr="VolunteerActivity.Date",
+                    sort_dir=False,
+                    filters={},
+                    columns=[1,5,6,10],
+                    limit=10
+                )
+            ),
+        ],
+        "qualifications":[
+            (
+                "Qualification Award",
+                "/qualifications",
+                ft.Icons.CARD_MEMBERSHIP,
+                ("Name","Requalifications","Unique Athletes"),
+                queries.view_table(
+                    conn=conn,
+                    table="QualificationAward",
+                    sort_attr="QualificationAward.Name",
+                    sort_dir=True,
+                    filters={},
+                    columns=[1,2,3],
+                    limit=10
+                )
+            ),
+            (
+                "Supervisors",
+                "/supervisors",
+                ft.Icons.SUPERVISOR_ACCOUNT,
+                ("Name","Requalifications"),
+                queries.view_table(
+                    conn=conn,
+                    table="Supervisor",
+                    sort_attr="Name",
+                    sort_dir=True,
+                    filters={},
+                    columns=[1,9],
+                    limit=10
+                )
+            ),
+        ],
+    }
+    conn.close()
+    return minitables[route]
 
 def create_minitable(page:ft.Page, route:str):
     def buttons(table,link):
@@ -194,10 +412,10 @@ def create_minitable(page:ft.Page, route:str):
                             [ft.Text(str(cell), text_align=ft.TextAlign.CENTER, size=15, expand=3) for cell in row[1:]]
                         ) for row in data
                     ] + [
-                        ft.TextButton(f"View All {size} Records", icon=ft.Icons.SEARCH, on_click=lambda _,link=link: page.run_task(page.push_route,link))
+                        ft.TextButton(f"View All Records", icon=ft.Icons.SEARCH, on_click=lambda _,link=link: page.run_task(page.push_route,link+"/view"))
                     ]
                 )
-            ) for name,link,icon,columns,data,size in minitables[route] for i in range(2)
+            ) for name,link,icon,columns,data in get_minitable(route) for i in range(2)
         ]
     )
     return cont
@@ -212,7 +430,13 @@ def create_left_cont(page:ft.Page, route:str):
 
 def create_right_cont(page:ft.Page, route:str):
     return [
-
+        ft.Container(
+            expand=True,
+            padding=25,
+            border_radius=20,
+            bgcolor=ft.Colors.SURFACE_CONTAINER,
+            content=ft.Text("Graphs are coming soon!",text_align=ft.TextAlign.CENTER)
+        )
     ]
 
 def build_page(page:ft.Page, route:str):
@@ -226,7 +450,7 @@ def build_page(page:ft.Page, route:str):
                 spacing=30,
                 vertical_alignment=ft.CrossAxisAlignment.START,
                 controls=[
-                    ft.Column(expand=3, spacing=15, controls=create_left_cont(page,route)),
+                    ft.Column(expand=4, spacing=15, controls=create_left_cont(page,route)),
                     ft.Column(expand=2, spacing=15, controls=create_right_cont(page,route)),
                 ]
             )

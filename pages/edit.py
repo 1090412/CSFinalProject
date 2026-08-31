@@ -180,10 +180,10 @@ def top_content(page:ft.Page, route:str, editables):
                                         expand=1,
                                         value=value,
                                         on_change=lambda e,i=i: on_change(e,i),
-                                        label="{value} hours",
+                                        label="{value}",
                                         min=info[0],
                                         max=info[1],
-                                        divisions=info[2]
+                                        divisions=info[1]-info[0]
                                     ) if types=="number" else
                                     create_date_picker(value,i) if types=="date" else
                                     ft.TextField(expand=1,value=value,label=f"{name}",on_change=lambda e,i=i: on_change(e,i)) if types=="text" else
@@ -312,6 +312,7 @@ def relational_content(page:ft.Page, route:str, link, info, id):
                 )
             )
         else:
+            records.append(new_record)
             new_record = [None for i in range(len(info[3])+1)]
             refresh_rows()
         conn.close()
@@ -360,10 +361,10 @@ def relational_content(page:ft.Page, route:str, link, info, id):
                         expand=int(12/len(info[3])),
                         on_change=lambda e,r=r,i=i:on_change(e,r,i),
                         value=record[i+1],
-                        label="{value} hours",
+                        label="{value}",
                         min=field[2][0],
                         max=field[2][1],
-                        divisions=8
+                        divisions=field[2][1]-field[2][0]
                     ) if field[1]=="number" else
                     create_date_picker(r,i) if field[1]=="date" else
                     ft.TextField(
@@ -442,10 +443,10 @@ def relational_content(page:ft.Page, route:str, link, info, id):
                     ft.Slider(
                         expand=int(12/len(info[3])),
                         on_change=lambda e,r=-1,i=i+1: on_change(e,r,i),
-                        label="{value} hours",
+                        label="{value}",
                         min=field[2][0],
                         max=field[2][1],
-                        divisions=8
+                        divisions=field[2][1]-field[2][0]
                     ) if field[1]=="number" else
                     create_date_picker(-1,i+1) if field[1]=="date" else
                     ft.TextField(
@@ -522,7 +523,7 @@ def child_content(page:ft.Page, route:str, link, info, id):
                 f"{info[1][1]}.{info[1][4]}",
                 True,
                 {
-                    f"{info[1][1]}.{info[1][3]}":id
+                    f"{info[1][1]}.{info[1][4]}":id
                 },
                 list(range(len(columns.columns[link])))
             )

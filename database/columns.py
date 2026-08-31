@@ -105,14 +105,19 @@ columns = {
         ("Race.EventID", "Event ID", "id", ("Event","events")),
         ("EventName", "Event Name", "text"),
         ("Race.AgeGroup", "Age Group", "enum", (("Open","Open"),("U23","U23"),("U19","U19"),("U17","U17"),("U15","U15"),("U14","U14"),("U13","U13"))),
-        ("Race.Gender", "Gender", "enum", (("Male","M"),("Female","F"),("Mixed","Mix")))
+        ("Race.Gender", "Gender", "enum", (("Male","M"),("Female","F"),("Mixed","Mix"))),
+        ("Results", "Results", "number", (0,50,1)),
+        ("Competitors", "Competitors", "number", (0,50,1)),
     ],
     "results": [
         ("Result.ResultID", "Result ID", "id"),
         ("Result.RaceID", "Race ID", "id", ("Race","races")),
         ("CompetitionName", "Competition Name", "text"),
         ("EventName", "Event Name", "text"),
-        ("Result.Ranking", "Ranking", "number", (1,100,1))
+        ("RaceAgeGroup", "Age Group", "enum", (("Open","Open"),("U23","U23"),("U19","U19"),("U17","U17"),("U15","U15"),("U14","U14"),("U13","U13"))),
+        ("RaceGender", "Gender", "enum", (("Male","M"),("Female","F"),("Mixed","Mix"))),
+        ("Result.Ranking", "Ranking", "number", (1,100,1)),
+        ("Athletes", "Team Members", "number", (1,12,1)),
     ]
 }
 
@@ -125,8 +130,8 @@ names = {
     "patrols": lambda cols: f"Patrol #{cols[0]} - {cols[2]} {cols[5]} {cols[4]}",
     "volunteering": lambda cols: f"Volunteer Activity #{cols[0]} - {cols[1]} {cols[5]}",
     "qualifications": lambda cols: f"Qualification #{cols[0]} - {cols[1]}",
-    "races": lambda cols: f"Race #{cols[0]} - {cols[2]} {cols[4]} {cols[5]} {cols[6]}",
-    "results": lambda cols: f"Result #{cols[0]} - {cols[2]} {cols[3]} - #{cols[4]}",
+    "races": lambda cols: f"Race #{cols[0]} - {cols[2]}: {cols[4]} - {cols[5]} {cols[6]}",
+    "results": lambda cols: f"Result #{cols[0]} - {cols[2]}: {cols[3]} - {cols[4]} {cols[5]} - #{cols[6]}",
 }
 
 relations = {

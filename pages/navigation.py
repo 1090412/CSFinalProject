@@ -1,18 +1,17 @@
 import flet as ft
 
 themes = {
-    "home":ft.Theme(color_scheme_seed=ft.Colors.BLUE_GREY),
+    "home":ft.Theme(color_scheme_seed=ft.Colors.GREY),
     "athletes":ft.Theme(color_scheme_seed=ft.Colors.YELLOW),
+    "supervisors":ft.Theme(color_scheme_seed=ft.Colors.PURPLE),
     "competitions":ft.Theme(color_scheme_seed=ft.Colors.BLUE),
     "events":ft.Theme(color_scheme_seed=ft.Colors.BLUE),
     "races":ft.Theme(color_scheme_seed=ft.Colors.BLUE),
     "results":ft.Theme(color_scheme_seed=ft.Colors.BLUE),
     "patrolgroups":ft.Theme(color_scheme_seed=ft.Colors.RED),
     "patrols":ft.Theme(color_scheme_seed=ft.Colors.RED),
-    "volunteering":ft.Theme(color_scheme_seed=ft.Colors.PURPLE),
-    "supervisors":ft.Theme(color_scheme_seed=ft.Colors.PURPLE),
+    "volunteering":ft.Theme(color_scheme_seed=ft.Colors.LIGHT_GREEN),
     "qualifications":ft.Theme(color_scheme_seed=ft.Colors.PURPLE),
-    "grants":ft.Theme(color_scheme_seed=ft.Colors.LIGHT_GREEN),
 }
 
 pages = {
@@ -41,10 +40,10 @@ pages = {
         ft.Icons.VOLUNTEER_ACTIVISM,
         ft.Icons.VOLUNTEER_ACTIVISM_OUTLINED
     ],
-    "grants":[
-        "Grants",
-        ft.Icons.MONEY,
-        ft.Icons.MONEY_OUTLINED
+    "qualifications":[
+        "Qualifications",
+        ft.Icons.CARD_MEMBERSHIP,
+        ft.Icons.CARD_MEMBERSHIP_OUTLINED,
     ],
 }
 
@@ -54,7 +53,7 @@ links = [
     "/competitions",
     "/patrols",
     "/volunteering",
-    "/grants",
+    "/qualifications",
 ]
 
 def create_appbar(page:ft.Page, route:str):

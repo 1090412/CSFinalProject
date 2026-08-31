@@ -62,6 +62,7 @@ def create_filters(page:ft.Page, route:str, settings:dict, update_func):
             settings["columns"].append(field_no)
         if not event.control.value and field_no in settings["columns"]:
             settings["columns"].remove(field_no)
+        settings["columns"].sort()
     def date_filter(field):
         def date_change(event):
             if event.control.start_value and event.control.end_value:
@@ -394,7 +395,7 @@ def build_page(page:ft.Page, route:str):
                       None
             for field in columns.columns[route]
         },
-        "columns": [0,1,2,3,4,5],
+        "columns": list(range(min(8, len(columns.columns[route])))),
         "page": 1,
         "num_records": 0
     }
