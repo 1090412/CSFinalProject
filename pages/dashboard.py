@@ -95,6 +95,7 @@ summary_card = {
     ],
 }
 
+# The majority of the function was unused/not completed
 def create_summary(page:ft.Page, route:str):
     cont = ft.Container(
             padding=25,
